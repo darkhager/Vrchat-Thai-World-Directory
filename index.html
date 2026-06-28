@@ -121,13 +121,14 @@
   .d-fri .day-label,.tg-dayhead.d-fri{background:var(--d-fri)}.d-sat .day-label,.tg-dayhead.d-sat{background:var(--d-sat)}
   .d-sun .day-label,.tg-dayhead.d-sun{background:var(--d-sun)}.d-spc .day-label,.tg-dayhead.d-spc{background:var(--d-spc)}
 
-  .venues{flex:1;display:flex;flex-wrap:wrap;gap:9px;padding:13px 15px;align-content:flex-start}
+  .venues{flex:1;display:flex;flex-wrap:wrap;gap:9px;padding:13px 15px;align-content:flex-start;align-items:flex-start}
   .venue{display:flex;flex-direction:column;gap:1px;min-width:148px;
     background:var(--chip);border:1px solid var(--line);border-radius:11px;padding:8px 12px;
     transition:transform .12s,background .12s,box-shadow .12s}
   .venue:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.16)}
   .time{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
   .v-name{font-size:14.5px;font-weight:500;color:var(--ink)}
+  .v-note{display:block;font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px;white-space:normal;max-width:210px}
   a.v-name{text-decoration:none;border-bottom:1px solid transparent}
   a.v-name:hover{border-bottom-color:currentColor}
   /* status → pastel cell-box color */
@@ -174,6 +175,7 @@
   a.tg-block:hover{filter:brightness(1.07)}
   .tg-block .nm{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tg-block .tm{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tg-block .tg-note{font-size:10.5px;color:var(--muted);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tg-block.open{background:var(--st-open);border-color:var(--st-open-bd)}
   .tg-block.reserve{background:var(--st-reserve);border-color:var(--st-reserve-bd)}
   .tg-block.renovate{background:var(--st-renovate);border-color:var(--st-renovate-bd)}
@@ -233,7 +235,7 @@
 const CONFIG = {
   sheetId: "1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U",
   apiKey: "REMOVED-API-KEY",  // restricted to the site referrer
-  range: "A3:M10",       // the day rows in the sheet (Monday … Special)
+  range: "A1:N20",       // generous window; day rows are matched by NAME (robust to row inserts)
   refreshMinutes: 15,    // re-pull from the sheet this often (0 = on load only)
 };
 
@@ -290,12 +292,12 @@ const SCHEDULE = [
     { time:"20:30–23:00", name:"Revelry Club", status:"open" },
   ]},
   { key:"spc", en:"Special Pattern", th:"ร้านเปิดตามหมายเหตุ", venues:[
-    { time:"20:00–21:30", name:"LOR I LAM", status:"open" },
-    { time:"??:??",       name:"ZODIAC", status:"open" },
-    { time:"20:00–22:30", name:"MitsuHana", status:"open" },
+    { time:"20:00–21:30", name:"LOR I LAM", status:"open", note:"เปิดวันหวยออก 1, 16 ของทุกเดือน" },
+    { time:"??:??",       name:"ZODIAC", status:"open", note:"สุ่มเปิด" },
+    { time:"20:00–22:30", name:"MitsuHana", status:"open", note:"เปิดทุกวันที่ 10, 20 ของทุกเดือน" },
     { time:"20:00–23:00", name:"Thailand Talent Show", status:"open" },
-    { time:"??:??",       name:"【𝕻𝖆𝖓𝖉𝖔𝖗𝖆】", status:"renovate" },
-    { time:"22:00–00:00", name:"The Golden Age", status:"open" },
+    { time:"??:??",       name:"【𝕻𝖆𝖓𝖉𝖔𝖗𝖆】", status:"renovate", note:"อาจจะเปิดวันไหนก็ได้" },
+    { time:"22:00–00:00", name:"The Golden Age", status:"open", note:"อาจเปิดวันศุกร์" },
     { time:"??–??",       name:"Bar 13 after midnight", status:"renovate" },
   ]},
 ];
@@ -317,7 +319,8 @@ function tableHTML(schedule){
       const nameHtml = v.discord
         ? `<a class="v-name" href="${esc(v.discord)}" target="_blank" rel="noopener">${esc(v.name)}</a>`
         : `<span class="v-name">${esc(v.name)}</span>`;
-      return `<div class="venue ${v.status||''}"><span class="time">${esc(v.time)}</span>${nameHtml}</div>`;
+      const noteHtml = v.note ? `<span class="v-note">📝 ${esc(v.note)}</span>` : '';
+      return `<div class="venue ${v.status||''}"><span class="time">${esc(v.time)}</span>${nameHtml}${noteHtml}</div>`;
     }).join('');
     return `<div class="day-row d-${day.key}${isToday?' today':''}">
       <div class="day-label">
@@ -358,7 +361,6 @@ function timelineHTML(schedule){
   }
   const SPAN = Math.max(30, END - START);
   const cols = Math.max(1, Math.round(SPAN/30));            // half-hour columns
-  const LANE = 54;
   let ticks = '';
   for(let m=START; m<=END; m+=30){
     const left = (m-START)/SPAN*100;
@@ -377,18 +379,24 @@ function timelineHTML(schedule){
     if(!lanes.length){
       return head + `<div class="tg-day" style="height:46px"><div class="tg-empty">No Scheduled Openings · ไม่มีร้านเปิด</div></div>`;
     }
-    const blocks = lanes.map(({ v, r }, i) => {
+    let top = 0;
+    const blocks = lanes.map(({ v, r }) => {
+      const hasNote = !!v.note;
+      const h = hasNote ? 62 : 44;
+      const blockTop = top + 5; top += h + 8;
       const label = `${venueIcon(v.name)} ${esc(v.name)}`;
       const pos = r ? `left:${(r.s-START)/SPAN*100}%;width:${(r.e-r.s)/SPAN*100}%`
-                    : `left:1%;width:30%`;
+                    : `left:1%;width:34%`;
       const cls = `tg-block ${v.status||''}${r ? '' : ' flex'}`;
-      const style = `${pos};top:${i*LANE+5}px;height:44px`;
-      const inner = `<span class="nm">${label}</span><span class="tm">${esc(v.time)}</span>`;
+      const style = `${pos};top:${blockTop}px;height:${h}px`;
+      const noteLine = hasNote ? `<span class="tg-note">📝 ${esc(v.note)}</span>` : '';
+      const inner = `<span class="nm">${label}</span><span class="tm">${esc(v.time)}</span>${noteLine}`;
+      const title = `${esc(v.time)} ${esc(v.name)}${hasNote ? ' — ' + esc(v.note) : ''}`;
       return v.discord
-        ? `<a class="${cls}" style="${style}" href="${esc(v.discord)}" target="_blank" rel="noopener" title="${esc(v.time)} ${esc(v.name)}">${inner}</a>`
-        : `<div class="${cls}" style="${style}" title="${esc(v.time)} ${esc(v.name)}">${inner}</div>`;
+        ? `<a class="${cls}" style="${style}" href="${esc(v.discord)}" target="_blank" rel="noopener" title="${title}">${inner}</a>`
+        : `<div class="${cls}" style="${style}" title="${title}">${inner}</div>`;
     }).join('');
-    return head + `<div class="tg-day" style="height:${lanes.length*LANE+6}px">${blocks}</div>`;
+    return head + `<div class="tg-day" style="height:${top + 2}px">${blocks}</div>`;
   }).join('');
   return `<div class="tg-scroll"><div class="tg-inner" style="--cols:${cols}">
     <div class="tg-axis">${ticks}</div>
@@ -445,10 +453,21 @@ function statusFromColor(c){
   return '';
 }
 function applyLive(rowData){
-  return SCHEDULE.map((day, i) => {
-    const cells = (rowData[i] || {}).values || [];
+  // Match each day to the sheet row whose column A names it (robust to row inserts).
+  const rowFor = {};
+  rowData.forEach(row => {
+    const a = (((row.values || [])[0] || {}).formattedValue || '').toLowerCase();
+    SCHEDULE.forEach(day => {
+      const key = day.en.toLowerCase().split(' ')[0];   // "monday" … "sunday" … "special"
+      if(a.includes(key) && !(day.key in rowFor)) rowFor[day.key] = row;
+    });
+  });
+  return SCHEDULE.map(day => {
+    const row = rowFor[day.key];
+    if(!row) return day;                                // not found → keep the saved copy
+    const cells = row.values || [];
     const venues = [];
-    for(let ci=1; ci<cells.length; ci++){            // ci=0 is the day-label column
+    for(let ci=1; ci<cells.length; ci++){              // ci=0 is the day-label column
       const cell = cells[ci] || {};
       const text = (cell.formattedValue || '').trim();
       if(!text) continue;
@@ -461,7 +480,8 @@ function applyLive(rowData){
                  || ((runs[0] || {}).format || {}).foregroundColor;
       const discord = cell.hyperlink
                  || runs.map(r => ((r.format||{}).link||{}).uri).find(Boolean);
-      venues.push({ time, name, status: statusFromColor(color), discord });
+      const note = (cell.note || '').trim();
+      venues.push({ time, name, status: statusFromColor(color), discord, note });
     }
     return venues.length ? { ...day, venues } : day;
   });
@@ -473,7 +493,7 @@ function setSync(state, text){
 async function fetchLive(){
   if(!CONFIG.apiKey){ setSync('off','⚙ Live sync off — add your API key to enable'); return; }
   setSync('sync','⟳ Syncing…');
-  const fields = 'sheets.data.rowData.values(formattedValue,hyperlink,effectiveFormat.textFormat(foregroundColor,foregroundColorStyle),textFormatRuns)';
+  const fields = 'sheets.data.rowData.values(formattedValue,note,hyperlink,effectiveFormat.textFormat(foregroundColor,foregroundColorStyle),textFormatRuns)';
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}`
             + `?ranges=${encodeURIComponent(CONFIG.range)}&includeGridData=true`
             + `&fields=${encodeURIComponent(fields)}&key=${CONFIG.apiKey}`;
