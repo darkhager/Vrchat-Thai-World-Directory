@@ -97,6 +97,12 @@
   .dot.open{background:#56de96} .dot.reserve{background:#62a4ff}
   .dot.renovate{background:#aab6ca} .dot.closed{background:#ff6c80}
 
+  /* Note from the sheet */
+  .note{max-width:760px;margin:0 auto 26px;text-align:center;font-size:13.5px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 18px;line-height:1.65}
+  .note b{color:var(--ink);font-weight:600}
+  .note .en{display:block;font-size:12px;opacity:.85;margin-top:3px}
+
   /* Table */
   .table{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
   .day-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}
@@ -204,6 +210,9 @@
     <span><i class="dot renovate"></i> Renovating · ปิดปรับปรุง</span>
     <span><i class="dot closed"></i> Closed this week · ปิดสัปดาห์นี้</span>
   </div>
+
+  <p class="note">📌 Link Discord แต่ละร้านสามารถกดเข้าไปที่ชื่อร้านได้เลย ข้อมูลเฉพาะของร้านสามารถกดดูได้จากหมายเหตุของแต่ละร้าน
+    <span class="en">Tap a venue's name to open its Discord — venue-specific details are in each venue's note.</span></p>
 
   <main class="table" id="table"></main>
 
