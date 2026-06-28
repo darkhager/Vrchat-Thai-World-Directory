@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VRChat Thailand — Roleplay World Schedule</title>
+<meta name="description" content="Weekly schedule of roleplay worlds, cafés and clubs open in Thailand on VRChat (GMT+7)." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<script>document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';</script>
+<style>
+  /* ─────────────────────────────────────────────────────────
+     EDIT YOUR SCHEDULE in the <script> at the bottom of this file.
+     ───────────────────────────────────────────────────────── */
+  :root{                         /* ── DARK (default) ── */
+    --ink:#eceefb;
+    --muted:#9da3bd;
+    --line:rgba(255,255,255,.10);
+    --panel:rgba(255,255,255,.045);
+    --pill:rgba(255,255,255,.06);
+    --chip:rgba(255,255,255,.045);
+    --chip-h:rgba(255,255,255,.09);
+    --shadow:0 22px 60px rgba(0,0,0,.50);
+    --today-tint:rgba(140,100,255,.16);
+    --page:
+      radial-gradient(1000px 560px at 8% -10%, #241a4d 0%, transparent 55%),
+      radial-gradient(1000px 560px at 100% 0%, #3a1b46 0%, transparent 52%),
+      linear-gradient(180deg,#0e0b1d,#100c22);
+    --st-open:rgba(74,222,140,.30);    --st-open-bd:rgba(74,222,140,.70);
+    --st-reserve:rgba(96,165,255,.30); --st-reserve-bd:rgba(96,165,255,.70);
+    --st-renovate:rgba(160,172,198,.24);--st-renovate-bd:rgba(160,172,198,.58);
+    --st-closed:rgba(255,99,120,.30);  --st-closed-bd:rgba(255,99,120,.72);
+    --d-mon:#5e4a1c;--d-tue:#5a2742;--d-wed:#234e2e;--d-thu:#5e3a1d;
+    --d-fri:#1f3c5c;--d-sat:#3a2c63;--d-sun:#5a2535;--d-spc:#1f4d44;
+  }
+  [data-theme="light"]{          /* ── LIGHT (secondary) ── */
+    --ink:#23262f;
+    --muted:#8a8f9a;
+    --line:#eceef2;
+    --panel:#ffffff;
+    --pill:#ffffff;
+    --chip:#f6f7f9;
+    --chip-h:#eef0f4;
+    --shadow:0 18px 50px rgba(40,45,70,.10);
+    --today-tint:rgba(124,77,255,.07);
+    --page:
+      radial-gradient(900px 500px at 8% -8%, #eaf2ff 0%, transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, #ffeaf6 0%, transparent 50%),
+      linear-gradient(180deg,#fbfcfe,#f3f5fa);
+    --st-open:#dcf4e5;    --st-open-bd:#bfe8cd;
+    --st-reserve:#dce9fb; --st-reserve-bd:#c3d9f5;
+    --st-renovate:#e9ebf0;--st-renovate-bd:#d8dce4;
+    --st-closed:#fcdee1;  --st-closed-bd:#f5c6cc;
+    --d-mon:#fdf4d2;--d-tue:#fcd9e1;--d-wed:#dcefd6;--d-thu:#ffe3c9;
+    --d-fri:#d4e6f9;--d-sat:#e3daf4;--d-sun:#f8d4da;--d-spc:#dcefd6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Kanit',system-ui,-apple-system,'Segoe UI',sans-serif;
+    color:var(--ink);
+    background:var(--page);
+    background-attachment:fixed;
+    min-height:100vh;line-height:1.4;-webkit-font-smoothing:antialiased;
+    transition:color .2s,background-color .2s;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:clamp(22px,4vw,46px) clamp(14px,4vw,30px) 60px}
+
+  /* Header */
+  header{text-align:center;margin-bottom:24px}
+  .eyebrow{display:inline-block;font-size:12px;letter-spacing:.24em;text-transform:uppercase;
+    color:#b14ad0;font-weight:600;margin-bottom:10px}
+  h1{font-size:clamp(26px,5vw,44px);font-weight:700;line-height:1.06;letter-spacing:-.01em}
+  .subtitle{color:var(--muted);font-size:clamp(14px,2.3vw,17px);font-weight:300;margin-top:6px}
+  .meta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px;align-items:center}
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--pill);border:1px solid var(--line);
+    padding:7px 13px;border-radius:999px;font-size:13.5px;color:var(--muted)}
+  .badge b{color:var(--ink);font-weight:600}
+  .toggle{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;
+    background:var(--pill);border:1px solid var(--line);color:var(--muted);
+    padding:7px 13px;border-radius:999px;font-size:13.5px;font-weight:500;
+    transition:transform .15s,box-shadow .15s}
+  .toggle:hover{transform:translateY(-2px)}
+  .btn{display:inline-flex;align-items:center;gap:8px;
+    background:linear-gradient(95deg,#7c4dff,#d24ad0);color:#fff;font-weight:600;text-decoration:none;
+    padding:9px 18px;border-radius:999px;font-size:13.5px;
+    transition:transform .15s,box-shadow .15s;box-shadow:0 8px 22px rgba(140,77,255,.30)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(210,74,208,.38)}
+
+  /* Legend */
+  .legend{display:flex;gap:8px 18px;flex-wrap:wrap;justify-content:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:11px 16px;margin:18px auto 26px;max-width:720px}
+  .legend span{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}
+  .dot{width:12px;height:12px;border-radius:4px;flex:none}
+  .dot.open{background:#56de96} .dot.reserve{background:#62a4ff}
+  .dot.renovate{background:#aab6ca} .dot.closed{background:#ff6c80}
+
+  /* Table */
+  .table{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+  .day-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}
+  .day-row:first-child{border-top:none}
+  .day-row.today{background:var(--today-tint)}
+
+  .day-label{flex:0 0 148px;display:flex;flex-direction:column;justify-content:center;
+    gap:2px;padding:16px;border-right:1px solid var(--line)}
+  .day-en{font-weight:600;font-size:16px}
+  .day-th{font-size:12.5px;color:var(--muted);font-weight:300}
+  .today-tag{align-self:flex-start;margin-top:5px;font-size:10.5px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:#fff;background:#7c4dff;padding:2px 8px;border-radius:999px}
+  /* day pastels */
+  .d-mon .day-label{background:var(--d-mon)}.d-tue .day-label{background:var(--d-tue)}
+  .d-wed .day-label{background:var(--d-wed)}.d-thu .day-label{background:var(--d-thu)}
+  .d-fri .day-label{background:var(--d-fri)}.d-sat .day-label{background:var(--d-sat)}
+  .d-sun .day-label{background:var(--d-sun)}.d-spc .day-label{background:var(--d-spc)}
+
+  .venues{flex:1;display:flex;flex-wrap:wrap;gap:9px;padding:13px 15px;align-content:flex-start}
+  .venue{display:flex;flex-direction:column;gap:1px;min-width:148px;
+    background:var(--chip);border:1px solid var(--line);border-radius:11px;padding:8px 12px;
+    transition:transform .12s,background .12s,box-shadow .12s}
+  .venue:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.16)}
+  .time{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
+  .v-name{font-size:14.5px;font-weight:500;color:var(--ink)}
+  a.v-name{text-decoration:none;border-bottom:1px solid transparent}
+  a.v-name:hover{border-bottom-color:currentColor}
+  /* status → pastel cell-box color */
+  .venue.open{background:var(--st-open);border-color:var(--st-open-bd)}
+  .venue.reserve{background:var(--st-reserve);border-color:var(--st-reserve-bd)}
+  .venue.renovate{background:var(--st-renovate);border-color:var(--st-renovate-bd)}
+  .venue.closed{background:var(--st-closed);border-color:var(--st-closed-bd)}
+
+  footer{margin-top:26px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}
+  footer a{color:#7c4dff;text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  .foot-sep{margin:0 8px;opacity:.4}
+  #sync{margin-top:12px;font-size:12.5px;font-weight:500}
+  #sync[data-state="live"]{color:#2fc985}
+  #sync[data-state="sync"]{color:#8c6bff}
+  #sync[data-state="err"]{color:#ff5b6e}
+  #sync[data-state="off"]{color:var(--muted)}
+
+  @media (max-width:660px){
+    .day-row{flex-direction:column}
+    .day-label{flex:none;flex-direction:row;align-items:center;gap:8px;border-right:none;
+      border-bottom:1px solid var(--line);padding:11px 15px}
+    .day-th{margin-left:auto}
+    .today-tag{margin-top:0}
+    .venue{flex:1 1 100%}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">VRChat · Thailand</span>
+    <h1>Roleplay World Schedule</h1>
+    <p class="subtitle">ตารางร้านโรลเพลย์ใน VRChat ประเทศไทย — เปิดร้านประจำสัปดาห์</p>
+    <div class="meta">
+      <span class="badge">🕒 Time zone <b>GMT/UTC +7</b></span>
+      <a class="btn" href="https://vrchat.com/home/group/grp_0d413f3b-45dc-48d8-837c-ec7bc1ea3d44" target="_blank" rel="noopener">＋ Join VRChat Group</a>
+      <button class="toggle" id="themeToggle" type="button" aria-label="Toggle dark / light mode">🌙 Dark</button>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span><i class="dot open"></i> Free entry · เข้าได้เลย</span>
+    <span><i class="dot reserve"></i> Reserve · ต้องจองก่อน</span>
+    <span><i class="dot renovate"></i> Renovating · ปิดปรับปรุง</span>
+    <span><i class="dot closed"></i> Closed this week · ปิดสัปดาห์นี้</span>
+  </div>
+
+  <main class="table" id="table"></main>
+
+  <footer>
+    <div>Join the in-game group to get schedule news · สามารถ Join Group เพื่อรับข่าวใน VR</div>
+    <div style="margin-top:6px">Contact / edit: discord <b style="color:var(--ink)">ponyshy</b>, <b style="color:var(--ink)">01_ten</b>, <b style="color:var(--ink)">darkhager</b></div>
+    <div style="margin-top:6px">
+      <a href="https://docs.google.com/spreadsheets/d/1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U/edit" target="_blank" rel="noopener">Original Google Sheet</a>
+    </div>
+    <div id="sync" data-state="off">⚙ Live sync off — add your API key to enable</div>
+  </footer>
+</div>
+
+<script>
+/* ── LIVE SYNC CONFIG ──────────────────────────────────────────
+   Paste your Google Sheets API key below to turn on live sync.
+   (How to get one: see the README next to this file.)               */
+const CONFIG = {
+  sheetId: "1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U",
+  apiKey: "",            // ← PASTE YOUR API KEY HERE between the quotes
+  range: "A3:M10",       // the day rows in the sheet (Monday … Special)
+  refreshMinutes: 15,    // re-pull from the sheet this often (0 = on load only)
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   SAVED SCHEDULE — shown instantly, and used if live sync is off or
+   fails.  Once your API key is set, the sheet overrides this.
+   One object per day.  Each venue: { time, name }
+     · status (optional): "open" | "reserve" | "renovate" | "closed"
+     · discord (optional): URL → makes the name a clickable link.
+   Statuses below reflect the sheet snapshot from 2026-06-28.
+   ═══════════════════════════════════════════════════════════════ */
+const SCHEDULE = [
+  { key:"mon", en:"Monday", th:"วันจันทร์", dow:1, venues:[
+    { time:"20:00–21:30", name:"ShinZenSo Cafe'", status:"open" },
+    { time:"20:00–22:00", name:"Mofumix Café", status:"open" },
+    { time:"20:30–22:30", name:"Visage Etoile", status:"open" },
+    { time:"21:00–23:00", name:"GDA", status:"open" },
+  ]},
+  { key:"tue", en:"Tuesday", th:"วันอังคาร", dow:2, venues:[
+    { time:"20:00–22:30", name:"荣耀 𝑅𝑜́𝑛𝑔 𝑦𝑎̀𝑜", status:"open" },
+    { time:"20:00–22:00", name:"New Frontier", status:"renovate" },
+    { time:"21:00–23:00", name:"Helheim", status:"open" },
+  ]},
+  { key:"wed", en:"Wednesday", th:"วันพุธ", dow:3, venues:[
+    { time:"20:00–22:00", name:"2Hours Coffee", status:"open" },
+    { time:"20:00–22:00", name:"Hikari 𝓩∅", status:"renovate" },
+  ]},
+  { key:"thu", en:"Thursday", th:"วันพฤหัสบดี", dow:4, venues:[
+    { time:"19:00–21:00", name:"PORlNG Maid Cafe", status:"open" },
+    { time:"21:00–23:00", name:"SaengJan Night Club", status:"open" },
+    { time:"22:00–00:00", name:"WANTED", status:"open" },
+  ]},
+  { key:"fri", en:"Friday", th:"วันศุกร์", dow:5, venues:[
+    { time:"19:30–21:00", name:"~YakiBar~", status:"open" },
+    { time:"20:00–22:00", name:"Pungpui", status:"renovate" },
+    { time:"20:30–22:30", name:"I-Yen Cafe", status:"open" },
+    { time:"20:30–22:30", name:"Visage Etoile", status:"open" },
+    { time:"22:00–00:00", name:"Olympus", status:"open" },
+  ]},
+  { key:"sat", en:"Saturday", th:"วันเสาร์", dow:6, venues:[
+    { time:"19:00–20:30", name:"PORlNG Maid Cafe", status:"open" },
+    { time:"20:00–22:00", name:"SeaSide Glow", status:"open" },
+    { time:"21:00–23:00", name:"SinghaSiam", status:"open" },
+    { time:"21:00–23:00", name:"Mali Tarot", status:"open" },
+    { time:"21:00–23:00", name:"CHIBI KAWAI", status:"closed" },
+    { time:"22:00–00:00", name:"กลิ่นทะเล", status:"open" },
+    { time:"22:00–00:00", name:"Lumina Night", status:"open" },
+    { time:"22:00–00:00", name:"GDA", status:"open" },
+  ]},
+  { key:"sun", en:"Sunday", th:"วันอาทิตย์", dow:0, venues:[
+    { time:"19:00–21:00", name:"MAID CAFE MAHO", status:"renovate" },
+    { time:"19:00–21:00", name:"Teapot House VR Thailand", status:"open" },
+    { time:"20:00–22:00", name:"Fora Doll", status:"open" },
+    { time:"20:30–23:00", name:"Revelry Club", status:"open" },
+  ]},
+  { key:"spc", en:"Special Pattern", th:"ร้านเปิดตามหมายเหตุ", venues:[
+    { time:"20:00–21:30", name:"LOR I LAM", status:"open" },
+    { time:"??:??",       name:"ZODIAC", status:"open" },
+    { time:"20:00–22:30", name:"MitsuHana", status:"open" },
+    { time:"20:00–23:00", name:"Thailand Talent Show", status:"open" },
+    { time:"??:??",       name:"【𝕻𝖆𝖓𝖉𝖔𝖗𝖆】", status:"renovate" },
+    { time:"22:00–00:00", name:"The Golden Age", status:"open" },
+    { time:"??–??",       name:"Bar 13 after midnight", status:"renovate" },
+  ]},
+];
+
+/* ── Render ── */
+const todayDow = (() => {
+  const utc = Date.now() + new Date().getTimezoneOffset() * 60000;
+  return new Date(utc + 7 * 3600000).getDay(); // now in GMT+7
+})();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(schedule){
+  document.getElementById('table').innerHTML = schedule.map(day => {
+    const isToday = day.dow !== undefined && day.dow === todayDow;
+    const venues = day.venues.map(v => {
+      const nameHtml = v.discord
+        ? `<a class="v-name" href="${esc(v.discord)}" target="_blank" rel="noopener">${esc(v.name)}</a>`
+        : `<span class="v-name">${esc(v.name)}</span>`;
+      return `<div class="venue ${v.status||''}"><span class="time">${esc(v.time)}</span>${nameHtml}</div>`;
+    }).join('');
+    return `<div class="day-row d-${day.key}${isToday?' today':''}">
+      <div class="day-label">
+        <span class="day-en">${esc(day.en)}</span>
+        <span class="day-th">${esc(day.th)}</span>
+        ${isToday?'<span class="today-tag">Today</span>':''}
+      </div>
+      <div class="venues">${venues}</div>
+    </div>`;
+  }).join('');
+}
+render(SCHEDULE);   // instant paint from the saved copy; live sync runs below
+
+/* ── Theme toggle (dark is the default; choice is remembered) ── */
+const themeBtn = document.getElementById('themeToggle');
+function paintTheme(){
+  const dark = document.documentElement.dataset.theme !== 'light';
+  themeBtn.textContent = dark ? '🌙 Dark' : '☀️ Light';
+}
+themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('theme', next);
+  paintTheme();
+});
+paintTheme();
+
+/* ── Live sync from Google Sheets (values + colors + Discord links) ── */
+function splitTimeName(text){
+  const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+  let time = '', name = '';
+  if(lines.length >= 2){ time = lines[0]; name = lines.slice(1).join(' '); }
+  else{
+    const m = (lines[0]||'').match(/^([\d\s:：?–\-]+?)([^\d\s:：?–\-].*)$/);
+    if(m){ time = m[1]; name = m[2]; } else { name = lines[0] || ''; }
+  }
+  return {
+    time: time.replace(/\s+/g,' ').replace(/\s*[-–]\s*/g,'–').trim(),
+    name: name.replace(/\s+/g,' ').trim(),
+  };
+}
+function statusFromColor(c){
+  if(!c) return '';
+  const r=c.red||0, g=c.green||0, b=c.blue||0, max=Math.max(r,g,b), min=Math.min(r,g,b);
+  if(max < 0.22) return '';                                   // black-ish → no status
+  if(max - min < 0.12) return 'renovate';                     // grey
+  if(g>=r && g>=b && g-Math.max(r,b) > 0.08) return 'open';   // green
+  if(r>=g && r>=b && r-Math.max(g,b) > 0.08) return 'closed'; // red
+  if(b>=r && b>=g) return 'reserve';                          // blue
+  return '';
+}
+function applyLive(rowData){
+  return SCHEDULE.map((day, i) => {
+    const cells = (rowData[i] || {}).values || [];
+    const venues = [];
+    for(let ci=1; ci<cells.length; ci++){            // ci=0 is the day-label column
+      const cell = cells[ci] || {};
+      const text = (cell.formattedValue || '').trim();
+      if(!text) continue;
+      const { time, name } = splitTimeName(text);
+      if(!name) continue;
+      const runs = cell.textFormatRuns || [];
+      const tf = (cell.effectiveFormat || {}).textFormat || {};
+      const color = tf.foregroundColor
+                 || (tf.foregroundColorStyle || {}).rgbColor
+                 || ((runs[0] || {}).format || {}).foregroundColor;
+      const discord = cell.hyperlink
+                 || runs.map(r => ((r.format||{}).link||{}).uri).find(Boolean);
+      venues.push({ time, name, status: statusFromColor(color), discord });
+    }
+    return venues.length ? { ...day, venues } : day;
+  });
+}
+function setSync(state, text){
+  const el = document.getElementById('sync');
+  if(el){ el.textContent = text; el.dataset.state = state; }
+}
+async function fetchLive(){
+  if(!CONFIG.apiKey){ setSync('off','⚙ Live sync off — add your API key to enable'); return; }
+  setSync('sync','⟳ Syncing…');
+  const fields = 'sheets.data.rowData.values(formattedValue,hyperlink,effectiveFormat.textFormat(foregroundColor,foregroundColorStyle),textFormatRuns)';
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}`
+            + `?ranges=${encodeURIComponent(CONFIG.range)}&includeGridData=true`
+            + `&fields=${encodeURIComponent(fields)}&key=${CONFIG.apiKey}`;
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const rowData = ((((json.sheets||[])[0]||{}).data||[])[0]||{}).rowData || [];
+    if(!rowData.length) throw new Error('no data in range');
+    render(applyLive(rowData));
+    const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    setSync('live','● Live · synced from the Google Sheet at ' + t);
+  }catch(err){
+    setSync('err','⚠ Could not sync (' + err.message + ') — showing saved copy');
+  }
+}
+fetchLive();
+if(CONFIG.refreshMinutes > 0) setInterval(fetchLive, CONFIG.refreshMinutes * 60000);
+</script>
+</body>
+</html>
