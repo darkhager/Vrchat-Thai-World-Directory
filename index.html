@@ -110,10 +110,10 @@
   .today-tag{align-self:flex-start;margin-top:5px;font-size:10.5px;font-weight:600;letter-spacing:.08em;
     text-transform:uppercase;color:#fff;background:#7c4dff;padding:2px 8px;border-radius:999px}
   /* day pastels */
-  .d-mon .day-label,.tl-day-head.d-mon{background:var(--d-mon)}.d-tue .day-label,.tl-day-head.d-tue{background:var(--d-tue)}
-  .d-wed .day-label,.tl-day-head.d-wed{background:var(--d-wed)}.d-thu .day-label,.tl-day-head.d-thu{background:var(--d-thu)}
-  .d-fri .day-label,.tl-day-head.d-fri{background:var(--d-fri)}.d-sat .day-label,.tl-day-head.d-sat{background:var(--d-sat)}
-  .d-sun .day-label,.tl-day-head.d-sun{background:var(--d-sun)}.d-spc .day-label,.tl-day-head.d-spc{background:var(--d-spc)}
+  .d-mon .day-label,.tg-dayhead.d-mon{background:var(--d-mon)}.d-tue .day-label,.tg-dayhead.d-tue{background:var(--d-tue)}
+  .d-wed .day-label,.tg-dayhead.d-wed{background:var(--d-wed)}.d-thu .day-label,.tg-dayhead.d-thu{background:var(--d-thu)}
+  .d-fri .day-label,.tg-dayhead.d-fri{background:var(--d-fri)}.d-sat .day-label,.tg-dayhead.d-sat{background:var(--d-sat)}
+  .d-sun .day-label,.tg-dayhead.d-sun{background:var(--d-sun)}.d-spc .day-label,.tg-dayhead.d-spc{background:var(--d-spc)}
 
   .venues{flex:1;display:flex;flex-wrap:wrap;gap:9px;padding:13px 15px;align-content:flex-start}
   .venue{display:flex;flex-direction:column;gap:1px;min-width:148px;
@@ -140,34 +140,39 @@
   #sync[data-state="err"]{color:#ff5b6e}
   #sync[data-state="off"]{color:var(--muted)}
 
-  /* ── Timeline (Gantt) view ── */
-  .tl-scroll{overflow-x:auto}
-  .tl-inner{min-width:680px}
-  .tl-axis-row,.tl-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}
-  .tl-axis-row{border-top:none}
-  .tl-label-col{flex:0 0 104px;display:flex;align-items:center;padding:6px 10px;
-    font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;
-    white-space:nowrap;border-right:1px solid var(--line)}
-  .tl-track{position:relative;flex:1;min-height:36px;
+  /* ── Timeline view (half-hour schedule grid) ── */
+  .tg-scroll{overflow-x:auto;padding-bottom:4px}
+  .tg-inner{position:relative;min-width:calc(var(--cols) * 64px)}
+  .tg-axis{position:relative;height:30px;border-bottom:1px solid var(--line);
     background-image:linear-gradient(90deg,var(--line) 1px,transparent 1px);
     background-size:calc(100% / var(--cols)) 100%}
-  .tl-axis{min-height:28px}
-  .tl-hour{position:absolute;top:7px;transform:translateX(-50%);font-size:11px;
-    color:var(--muted);font-variant-numeric:tabular-nums;pointer-events:none}
-  .tl-day-head{padding:6px 12px;font-weight:600;font-size:13.5px;color:var(--ink);border-top:1px solid var(--line)}
-  .tl-day-head span{font-weight:300;font-size:12px;color:var(--muted);margin-left:6px}
-  .tl-day-head.today{box-shadow:inset 4px 0 0 #8c6bff}
-  .tl-bar{position:absolute;top:5px;bottom:5px;display:flex;align-items:center;
-    padding:0 9px;border-radius:8px;border:1px solid var(--line);background:var(--chip);
-    font-size:12.5px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;
-    text-overflow:ellipsis;min-width:44px}
-  a.tl-bar{text-decoration:none}
-  a.tl-bar:hover{filter:brightness(1.08)}
-  .tl-bar.open{background:var(--st-open);border-color:var(--st-open-bd)}
-  .tl-bar.reserve{background:var(--st-reserve);border-color:var(--st-reserve-bd)}
-  .tl-bar.renovate{background:var(--st-renovate);border-color:var(--st-renovate-bd)}
-  .tl-bar.closed{background:var(--st-closed);border-color:var(--st-closed-bd)}
-  .tl-bar.flex{left:2%;right:2%;background:transparent;border-style:dashed;color:var(--muted);justify-content:center}
+  .tg-tick{position:absolute;top:8px;font-size:11px;color:var(--muted);
+    font-variant-numeric:tabular-nums;transform:translateX(-50%);pointer-events:none;white-space:nowrap}
+  .tg-tick.edge-l{transform:none}
+  .tg-tick.edge-r{transform:translateX(-100%)}
+  .tg-dayhead{display:flex;align-items:center;gap:9px;padding:7px 14px;
+    font-weight:700;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ink);border-top:1px solid var(--line)}
+  .tg-dayhead .th{font-weight:400;font-size:11.5px;letter-spacing:0;text-transform:none;color:var(--muted)}
+  .tg-dayhead .tg-today{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.08em;
+    color:#fff;background:#8c6bff;padding:2px 8px;border-radius:999px}
+  .tg-day{position:relative;
+    background-image:linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:calc(100% / var(--cols)) 100%}
+  .tg-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:12.5px;font-style:italic}
+  .tg-block{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:1px;
+    padding:5px 11px;border-radius:11px;border:1px solid var(--line);background:var(--chip);
+    overflow:hidden;min-width:106px;box-shadow:0 4px 12px rgba(0,0,0,.14)}
+  a.tg-block{text-decoration:none}
+  a.tg-block:hover{filter:brightness(1.07)}
+  .tg-block .nm{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tg-block .tm{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tg-block.open{background:var(--st-open);border-color:var(--st-open-bd)}
+  .tg-block.reserve{background:var(--st-reserve);border-color:var(--st-reserve-bd)}
+  .tg-block.renovate{background:var(--st-renovate);border-color:var(--st-renovate-bd)}
+  .tg-block.closed{background:var(--st-closed);border-color:var(--st-closed-bd)}
+  .tg-block.flex{border-style:dashed}
 
   @media (max-width:660px){
     .day-row{flex-direction:column}
@@ -325,45 +330,60 @@ function parseRange(t){
   if(e <= s) e += 1440;                 // crosses midnight (… – 00:00)
   return { s, e };
 }
+function venueIcon(name){
+  const n = name.toLowerCase();
+  if(/maid|เมด|メイド/.test(n)) return '🎀';
+  if(/tarot/.test(n)) return '🔮';
+  if(/caf|coffee|tea|teapot/.test(n)) return '☕';
+  if(/bar|izakaya|yaki|pub/.test(n)) return '🍸';
+  if(/club|night|disco|glow|lumina/.test(n)) return '🎵';
+  return '📍';
+}
 function timelineHTML(schedule){
   const ranges = [];
   schedule.forEach(d => d.venues.forEach(v => { const r = parseRange(v.time); if(r) ranges.push(r); }));
-  let START = 19*60, END = 24*60;
+  let START = 18*60, END = 24*60;                          // default window 18:00 – 00:00
   if(ranges.length){
-    START = Math.floor(Math.min(...ranges.map(r=>r.s))/60)*60;
-    END   = Math.ceil (Math.max(...ranges.map(r=>r.e))/60)*60;
+    START = Math.min(START, Math.floor(Math.min(...ranges.map(r=>r.s))/30)*30);
+    END   = Math.max(END,   Math.ceil (Math.max(...ranges.map(r=>r.e))/30)*30);
   }
-  const SPAN = Math.max(60, END - START);
-  const cols = Math.max(1, Math.round(SPAN/60));
+  const SPAN = Math.max(30, END - START);
+  const cols = Math.max(1, Math.round(SPAN/30));            // half-hour columns
+  const LANE = 54;
   let ticks = '';
-  for(let h=START; h<=END; h+=60){
-    const left = (h-START)/SPAN*100;
-    const lbl = String(Math.floor((h%1440)/60)).padStart(2,'0') + ':00';
-    ticks += `<span class="tl-hour" style="left:${left}%">${lbl}</span>`;
+  for(let m=START; m<=END; m+=30){
+    const left = (m-START)/SPAN*100;
+    const lbl = String(Math.floor((m%1440)/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+    const cls = m===START ? ' edge-l' : (m===END ? ' edge-r' : '');
+    ticks += `<span class="tg-tick${cls}" style="left:${left}%">${lbl}</span>`;
   }
-  const body = schedule.map(day => {
+  const days = schedule.map(day => {
+    const isToday = day.dow !== undefined && day.dow === todayDow;
+    const head = `<div class="tg-dayhead d-${day.key}${isToday?' today':''}">${esc(day.en)}`
+               + ` <span class="th">${esc(day.th)}</span>${isToday?'<span class="tg-today">Today</span>':''}</div>`;
     const timed = [], flex = [];
     day.venues.forEach(v => { const r = parseRange(v.time); (r ? timed : flex).push({ v, r }); });
     timed.sort((a,b) => a.r.s - b.r.s);
-    const rows = [...timed, ...flex].map(({ v, r }) => {
-      const name = esc(v.name), cls = v.status || '';
-      let bar;
-      if(r){
-        const style = `left:${(r.s-START)/SPAN*100}%;width:${(r.e-r.s)/SPAN*100}%`;
-        bar = v.discord
-          ? `<a class="tl-bar ${cls}" style="${style}" href="${esc(v.discord)}" target="_blank" rel="noopener" title="${esc(v.time)} ${name}">${name}</a>`
-          : `<span class="tl-bar ${cls}" style="${style}" title="${esc(v.time)} ${name}">${name}</span>`;
-      } else {
-        bar = `<span class="tl-bar flex ${cls}" title="${name}">${name} · ${esc(v.time)}</span>`;
-      }
-      return `<div class="tl-row"><div class="tl-label-col">${esc(v.time)}</div><div class="tl-track">${bar}</div></div>`;
+    const lanes = [...timed, ...flex];
+    if(!lanes.length){
+      return head + `<div class="tg-day" style="height:46px"><div class="tg-empty">No Scheduled Openings · ไม่มีร้านเปิด</div></div>`;
+    }
+    const blocks = lanes.map(({ v, r }, i) => {
+      const label = `${venueIcon(v.name)} ${esc(v.name)}`;
+      const pos = r ? `left:${(r.s-START)/SPAN*100}%;width:${(r.e-r.s)/SPAN*100}%`
+                    : `left:1%;width:30%`;
+      const cls = `tg-block ${v.status||''}${r ? '' : ' flex'}`;
+      const style = `${pos};top:${i*LANE+5}px;height:44px`;
+      const inner = `<span class="nm">${label}</span><span class="tm">${esc(v.time)}</span>`;
+      return v.discord
+        ? `<a class="${cls}" style="${style}" href="${esc(v.discord)}" target="_blank" rel="noopener" title="${esc(v.time)} ${esc(v.name)}">${inner}</a>`
+        : `<div class="${cls}" style="${style}" title="${esc(v.time)} ${esc(v.name)}">${inner}</div>`;
     }).join('');
-    const isToday = day.dow !== undefined && day.dow === todayDow;
-    return `<div class="tl-day-head d-${day.key}${isToday?' today':''}">${esc(day.en)} <span>${esc(day.th)}</span></div>${rows}`;
+    return head + `<div class="tg-day" style="height:${lanes.length*LANE+6}px">${blocks}</div>`;
   }).join('');
-  return `<div class="tl-scroll"><div class="tl-inner" style="--cols:${cols}">
-    <div class="tl-axis-row"><div class="tl-label-col">⏱ GMT+7</div><div class="tl-track tl-axis">${ticks}</div></div>
-    ${body}
+  return `<div class="tg-scroll"><div class="tg-inner" style="--cols:${cols}">
+    <div class="tg-axis">${ticks}</div>
+    ${days}
   </div></div>`;
 }
 
