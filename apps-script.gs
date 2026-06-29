@@ -1,12 +1,13 @@
 /**
  * VRChat Thailand schedule — Google Apps Script backend.
  *
- *   buildPayload()  — reads the sheet → final-shape { days:[{key,en,th,dow,venues:[
- *                     {time,name,status,discord,note}…]}] }.
- *   doGet()         — live JSON endpoint (the site uses this as a FALLBACK).
- *   publishJson()   — writes schedule.json into the GitHub repo (the site's
- *                     PRIMARY data source). Run on a 15-min timer trigger.
- *   installTrigger()— run ONCE to create that timer.
+ *   buildPayload()  — reads the schedule sheet → { days:[{key,en,th,dow,venues:[…]}] }.
+ *   buildEvents()   — reads the Form-responses sheet's APPROVED rows → { events:[…] }.
+ *   doGet()         — live schedule JSON endpoint (the site uses this as a FALLBACK).
+ *   publishJson()/publishEvents()/publishAll() — commit schedule.json /
+ *                     approved_events.json to the repo (the site's data). Timer runs publishAll.
+ *   setupApprovalColumn() — run ONCE to add the Approved/Rejected dropdown to the responses sheet.
+ *   installTrigger()— run ONCE to create the 15-min timer.
  *
  * Secrets live in Project Settings → Script properties (never in the repo):
  *   GITHUB_TOKEN — fine-grained PAT, Contents:Read-and-write on this repo only.
@@ -22,6 +23,11 @@ const GH_OWNER  = 'darkhager';
 const GH_REPO   = 'Vrchat-Thai-World-Directory';
 const GH_BRANCH = 'main';
 const GH_PATH   = 'schedule.json';
+
+// Event Feeds (Google Form responses) → approved_events.json
+const EVENTS_SHEET_ID = '18H3DEjQFcUTnxYWiCKNN9IihyNLrUrI9xAZ01m0TNKI';
+const EVENTS_PATH     = 'approved_events.json';
+const STATUS_HEADER   = 'Status';   // admin sets this per row: Approved / Rejected / (blank = pending)
 
 // Day rows are matched by the English name in column A (robust to row inserts).
 const DAYS = [
@@ -130,13 +136,12 @@ function doGet() {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/** Write schedule.json to GitHub. Skips the commit when nothing changed. */
-function publishJson() {
+/** Commit `json` to `path` in the repo via the GitHub contents API. Skips no-op commits. */
+function ghCommit(path, json) {
   const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) throw new Error('Set GITHUB_TOKEN in Project Settings → Script properties.');
 
-  const json = JSON.stringify(buildPayload(), null, 2);
-  const api  = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_PATH;
+  const api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + path;
   const headers = {
     Authorization: 'Bearer ' + token,
     Accept: 'application/vnd.github+json',
@@ -154,11 +159,11 @@ function publishJson() {
     const curJson = Utilities.newBlob(
       Utilities.base64Decode(cur.content.replace(/\s/g, ''))
     ).getDataAsString();
-    if (curJson === json) return 'unchanged';   // schedule identical → no commit
+    if (curJson === json) return 'unchanged';   // identical → no commit
   }
 
   const body = {
-    message: 'Update schedule.json (' + new Date().toISOString() + ')',
+    message: 'Update ' + path + ' (' + new Date().toISOString() + ')',
     content: Utilities.base64Encode(json, Utilities.Charset.UTF_8),
     branch: GH_BRANCH,
   };
@@ -177,11 +182,88 @@ function publishJson() {
   return 'committed';
 }
 
-/** Run ONCE to publish schedule.json every 15 minutes. */
+function publishJson()   { return ghCommit(GH_PATH,     JSON.stringify(buildPayload(), null, 2)); }
+function publishEvents() { return ghCommit(EVENTS_PATH, JSON.stringify(buildEvents(),  null, 2)); }
+
+/** Publish both data files. This is what the timer runs. */
+function publishAll() {
+  return 'schedule:' + publishJson() + ' | events:' + publishEvents();
+}
+
+/* ── Event Feeds (from the Google Form responses sheet) ─────────────────────── */
+
+function eventsSheet_() {
+  const ss = SpreadsheetApp.openById(EVENTS_SHEET_ID);
+  return ss.getSheetByName('Form Responses 1') || ss.getSheets()[0];
+}
+
+/** Run ONCE: add the "Status" column with an Approved/Rejected dropdown. */
+function setupApprovalColumn() {
+  const sheet = eventsSheet_();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var col = headers.indexOf(STATUS_HEADER) + 1;          // 0 → not present
+  if (col === 0) {
+    col = sheet.getLastColumn() + 1;
+    sheet.getRange(1, col).setValue(STATUS_HEADER);
+  }
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Approved', 'Rejected'], true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, col, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
+  return 'Status dropdown at column ' + col;
+}
+
+/** Read approved form rows → { events:[{name,by,type,date,time,link,note}] }.
+ *  Never includes the submitter email or timestamp. */
+function buildEvents() {
+  const sheet = eventsSheet_();
+  const data = sheet.getDataRange().getDisplayValues();
+  if (data.length < 2) return { events: [] };
+  const headers = data[0];
+  function col(substr) {
+    for (var i = 0; i < headers.length; i++) {
+      if (String(headers[i]).toLowerCase().indexOf(substr) !== -1) return i;
+    }
+    return -1;
+  }
+  const cName = col('event name'), cBy = col('event by'), cLink = col('event links'),
+        cType = col('event type'),
+        cOtD = col('one time event date'), cOtT = col('one time event time'),
+        cWkD = col('weekly event date'),   cWkT = col('weekly event time'),
+        cSpD = col('special pattern'),      cSpT = col('special event time'),
+        cNote = col('note'), cStatus = col('status');
+
+  const events = [];
+  for (var r = 1; r < data.length; r++) {
+    const row = data[r];
+    if (cStatus < 0 || String(row[cStatus]).trim().toLowerCase() !== 'approved') continue;
+    const name = cName >= 0 ? String(row[cName]).trim() : '';
+    if (!name) continue;
+    function pick(a, b, c) {
+      return (a >= 0 && String(row[a]).trim()) ||
+             (b >= 0 && String(row[b]).trim()) ||
+             (c >= 0 && String(row[c]).trim()) || '';
+    }
+    events.push({
+      name: name,
+      by:   cBy   >= 0 ? String(row[cBy]).trim()   : '',
+      type: cType >= 0 ? String(row[cType]).trim() : '',
+      date: pick(cOtD, cWkD, cSpD),
+      time: pick(cOtT, cWkT, cSpT),
+      link: cLink >= 0 ? String(row[cLink]).trim() : '',
+      note: cNote >= 0 ? String(row[cNote]).trim() : '',
+    });
+  }
+  return { events: events };
+}
+
+/** Run ONCE to publish schedule.json + approved_events.json every 15 minutes. */
 function installTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'publishJson') ScriptApp.deleteTrigger(t);
+    var h = t.getHandlerFunction();
+    if (h === 'publishJson' || h === 'publishEvents' || h === 'publishAll') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('publishJson').timeBased().everyMinutes(15).create();
+  ScriptApp.newTrigger('publishAll').timeBased().everyMinutes(15).create();
   return 'trigger installed';
 }
