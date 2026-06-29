@@ -230,11 +230,13 @@
 
 <script>
 /* ── LIVE SYNC CONFIG ──────────────────────────────────────────
-   Live sync now goes through a Google Apps Script (no API key in this page).
-   Paste your deployed Web-app URL (ends in /exec) below. See apps-script.gs.  */
+   Data comes from a static schedule.json published to this repo by the
+   Apps Script backend (no API key in this page). If that file is missing,
+   the page falls back to the live Apps Script endpoint. See apps-script.gs. */
 const CONFIG = {
-  scriptUrl: "https://script.google.com/macros/s/AKfycbwz9QcGQOfbhxMKuNaVhw-cnXrzH18pGl2uqu3JZRG_7A7Ax90mgWmFiCCrzN4AamE/exec",
-  refreshMinutes: 15,    // re-pull from the sheet this often (0 = on load only)
+  jsonUrl: "schedule.json",   // primary: static file published by Apps Script
+  scriptUrl: "https://script.google.com/macros/s/AKfycbwz9QcGQOfbhxMKuNaVhw-cnXrzH18pGl2uqu3JZRG_7A7Ax90mgWmFiCCrzN4AamE/exec",  // fallback
+  refreshMinutes: 15,    // re-pull this often (0 = on load only)
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -491,21 +493,38 @@ function setSync(state, text){
   const el = document.getElementById('sync');
   if(el){ el.textContent = text; el.dataset.state = state; }
 }
+async function loadRows(url, opts){
+  const res = await fetch(url, opts);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const rows = (await res.json()).rows || [];
+  if(!rows.length) throw new Error('no data');
+  return { rows, res };
+}
 async function fetchLive(){
-  if(!CONFIG.scriptUrl){ setSync('off','⚙ Live sync off — add your Apps Script URL to enable'); return; }
   setSync('sync','⟳ Syncing…');
-  try{
-    const res = await fetch(CONFIG.scriptUrl);
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    const rows = json.rows || [];
-    if(!rows.length) throw new Error('no data');
-    render(applyLive(rows));
-    const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-    setSync('live','● Live · synced from the Google Sheet at ' + t);
-  }catch(err){
-    setSync('err','⚠ Could not sync (' + err.message + ') — showing saved copy');
+  // 1) static schedule.json published to the repo (no backend on the hot path)
+  if(CONFIG.jsonUrl){
+    try{
+      const { rows, res } = await loadRows(CONFIG.jsonUrl + '?t=' + Date.now(), { cache:'no-store' });
+      render(applyLive(rows));
+      const lm = res.headers.get('last-modified');
+      const t = lm ? new Date(lm).toLocaleString([], { dateStyle:'medium', timeStyle:'short' })
+                   : new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      setSync('live','● Live · updated ' + t);
+      return;
+    }catch(err){ /* fall through to the live endpoint */ }
   }
+  // 2) fallback: live Apps Script endpoint
+  if(CONFIG.scriptUrl){
+    try{
+      const { rows } = await loadRows(CONFIG.scriptUrl);
+      render(applyLive(rows));
+      const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      setSync('live','● Live · synced from the Google Sheet at ' + t);
+      return;
+    }catch(err){ setSync('err','⚠ Could not sync (' + err.message + ') — showing saved copy'); return; }
+  }
+  setSync('err','⚠ Could not sync — showing saved copy');
 }
 fetchLive();
 if(CONFIG.refreshMinutes > 0) setInterval(fetchLive, CONFIG.refreshMinutes * 60000);
