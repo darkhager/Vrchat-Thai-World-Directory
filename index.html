@@ -429,84 +429,24 @@ viewBtn.addEventListener('click', () => {
 paintView();
 
 /* ── Live sync from Google Sheets (values + colors + Discord links) ── */
-function splitTimeName(text){
-  const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
-  let time = '', name = '';
-  if(lines.length >= 2){ time = lines[0]; name = lines.slice(1).join(' '); }
-  else{
-    const m = (lines[0]||'').match(/^([\d\s:：?–\-]+?)([^\d\s:：?–\-].*)$/);
-    if(m){ time = m[1]; name = m[2]; } else { name = lines[0] || ''; }
-  }
-  return {
-    time: time.replace(/\s+/g,' ').replace(/\s*[-–]\s*/g,'–').trim(),
-    name: name.replace(/\s+/g,' ').trim(),
-  };
-}
-function hexToRgb(hex){
-  if(!hex || typeof hex !== 'string') return null;
-  const m = hex.replace('#','').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
-  if(!m) return null;
-  return { red:parseInt(m[1],16)/255, green:parseInt(m[2],16)/255, blue:parseInt(m[3],16)/255 };
-}
-function statusFromColor(c){
-  if(!c) return '';
-  const r=c.red||0, g=c.green||0, b=c.blue||0, max=Math.max(r,g,b), min=Math.min(r,g,b);
-  if(max < 0.22) return '';                                   // black-ish → no status
-  if(max - min < 0.12) return 'renovate';                     // grey
-  if(g>=r && g>=b && g-Math.max(r,b) > 0.08) return 'open';   // green
-  if(r>=g && r>=b && r-Math.max(g,b) > 0.08) return 'closed'; // red
-  if(b>=r && b>=g) return 'reserve';                          // blue
-  return '';
-}
-function applyLive(rows){
-  // rows: [[{text,color,link,note}, …], …] from the Apps Script.
-  // Match each day to the row whose column A names it (robust to row inserts).
-  const rowFor = {};
-  rows.forEach(cells => {
-    const a = ((cells[0] || {}).text || '').toLowerCase();
-    SCHEDULE.forEach(day => {
-      const key = day.en.toLowerCase().split(' ')[0];   // "monday" … "sunday" … "special"
-      if(a.includes(key) && !(day.key in rowFor)) rowFor[day.key] = cells;
-    });
-  });
-  return SCHEDULE.map(day => {
-    const cells = rowFor[day.key];
-    if(!cells) return day;                              // not found → keep the saved copy
-    const venues = [];
-    for(let ci=1; ci<cells.length; ci++){              // ci=0 is the day-label column
-      const cell = cells[ci] || {};
-      const text = (cell.text || '').trim();
-      if(!text) continue;
-      const { time, name } = splitTimeName(text);
-      if(!name) continue;
-      venues.push({
-        time, name,
-        status: statusFromColor(hexToRgb(cell.color)),
-        discord: cell.link || '',
-        note: (cell.note || '').trim(),
-      });
-    }
-    return venues.length ? { ...day, venues } : day;
-  });
-}
 function setSync(state, text){
   const el = document.getElementById('sync');
   if(el){ el.textContent = text; el.dataset.state = state; }
 }
-async function loadRows(url, opts){
+async function loadDays(url, opts){
   const res = await fetch(url, opts);
   if(!res.ok) throw new Error('HTTP ' + res.status);
-  const rows = (await res.json()).rows || [];
-  if(!rows.length) throw new Error('no data');
-  return { rows, res };
+  const days = (await res.json()).days || [];   // Apps Script returns final-shape days
+  if(!days.length) throw new Error('no data');
+  return { days, res };
 }
 async function fetchLive(){
   setSync('sync','⟳ Syncing…');
   // 1) static schedule.json published to the repo (no backend on the hot path)
   if(CONFIG.jsonUrl){
     try{
-      const { rows, res } = await loadRows(CONFIG.jsonUrl + '?t=' + Date.now(), { cache:'no-store' });
-      render(applyLive(rows));
+      const { days, res } = await loadDays(CONFIG.jsonUrl + '?t=' + Date.now(), { cache:'no-store' });
+      render(days);
       const lm = res.headers.get('last-modified');
       const t = lm ? new Date(lm).toLocaleString([], { dateStyle:'medium', timeStyle:'short' })
                    : new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
@@ -517,8 +457,8 @@ async function fetchLive(){
   // 2) fallback: live Apps Script endpoint
   if(CONFIG.scriptUrl){
     try{
-      const { rows } = await loadRows(CONFIG.scriptUrl);
-      render(applyLive(rows));
+      const { days } = await loadDays(CONFIG.scriptUrl);
+      render(days);
       const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
       setSync('live','● Live · synced from the Google Sheet at ' + t);
       return;

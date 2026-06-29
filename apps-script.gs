@@ -1,7 +1,8 @@
 /**
  * VRChat Thailand schedule — Google Apps Script backend.
  *
- *   buildPayload()  — reads the sheet → { rows:[[{text,color,link,note}…]] }.
+ *   buildPayload()  — reads the sheet → final-shape { days:[{key,en,th,dow,venues:[
+ *                     {time,name,status,discord,note}…]}] }.
  *   doGet()         — live JSON endpoint (the site uses this as a FALLBACK).
  *   publishJson()   — writes schedule.json into the GitHub repo (the site's
  *                     PRIMARY data source). Run on a 15-min timer trigger.
@@ -10,7 +11,7 @@
  * Secrets live in Project Settings → Script properties (never in the repo):
  *   GITHUB_TOKEN — fine-grained PAT, Contents:Read-and-write on this repo only.
  *
- * It exposes ONLY this sheet's cell text, font color, Discord link and note —
+ * It exposes ONLY this sheet's schedule (text, status, Discord link, note) —
  * nothing else in the spreadsheet — so the sheet can be made private.
  */
 
@@ -22,36 +23,104 @@ const GH_REPO   = 'Vrchat-Thai-World-Directory';
 const GH_BRANCH = 'main';
 const GH_PATH   = 'schedule.json';
 
-/** Read the sheet grid into { rows:[[{text,color,link,note}…]] }. */
+// Day rows are matched by the English name in column A (robust to row inserts).
+const DAYS = [
+  { key: 'mon', en: 'Monday',          th: 'วันจันทร์',      dow: 1 },
+  { key: 'tue', en: 'Tuesday',         th: 'วันอังคาร',      dow: 2 },
+  { key: 'wed', en: 'Wednesday',       th: 'วันพุธ',         dow: 3 },
+  { key: 'thu', en: 'Thursday',        th: 'วันพฤหัสบดี',    dow: 4 },
+  { key: 'fri', en: 'Friday',          th: 'วันศุกร์',       dow: 5 },
+  { key: 'sat', en: 'Saturday',        th: 'วันเสาร์',       dow: 6 },
+  { key: 'sun', en: 'Sunday',          th: 'วันอาทิตย์',     dow: 0 },
+  { key: 'spc', en: 'Special Pattern', th: 'ร้านเปิดตามหมายเหตุ', dow: -1 },
+];
+
+/** Read the sheet → { days:[{key,en,th,dow,venues:[…]}] } (final shape). */
 function buildPayload() {
   const ss    = SpreadsheetApp.openById(SHEET_ID);
   const sheet = SHEET_NAME ? ss.getSheetByName(SHEET_NAME) : ss.getSheets()[0];
   const range = sheet.getDataRange();
 
   const text   = range.getDisplayValues();   // cell text
-  const colors = range.getFontColors();      // "#rrggbb" per cell  → status
-  const notes  = range.getNotes();           // cell note           → opening conditions
+  const colors = range.getFontColors();      // "#rrggbb" per cell → status
+  const notes  = range.getNotes();           // cell note → opening conditions
   const rich   = range.getRichTextValues();  // for the Discord hyperlink
 
-  const rows = text.map(function (line, r) {
-    return line.map(function (t, c) {
-      var link = null;
-      var rt = rich[r][c];
-      if (rt) {
-        link = rt.getLinkUrl();              // whole-cell link
-        if (!link) {                         // or a link on part of the cell (the name)
-          var runs = rt.getRuns();
-          for (var i = 0; i < runs.length; i++) {
-            var u = runs[i].getLinkUrl();
-            if (u) { link = u; break; }
-          }
-        }
-      }
-      return { text: t, color: colors[r][c], link: link, note: notes[r][c] || '' };
+  // Match each day to the first row whose column A names it.
+  const rowFor = {};
+  for (var r = 0; r < text.length; r++) {
+    var a = (text[r][0] || '').toLowerCase();
+    DAYS.forEach(function (d) {
+      var name = d.en.toLowerCase().split(' ')[0];   // "monday" … "special"
+      if (a.indexOf(name) !== -1 && !(d.key in rowFor)) rowFor[d.key] = r;
     });
+  }
+
+  const days = DAYS.map(function (d) {
+    var venues = [];
+    var r = rowFor[d.key];
+    if (r != null) {
+      for (var c = 1; c < text[r].length; c++) {       // c=0 is the day-label column
+        var t = (text[r][c] || '').trim();
+        if (!t) continue;
+        var tn = splitTimeName(t);
+        if (!tn.name) continue;
+        venues.push({
+          time: tn.time,
+          name: tn.name,
+          status: statusFromHex(colors[r][c]),
+          discord: cellLink(rich[r][c]) || '',
+          note: (notes[r][c] || '').trim(),
+        });
+      }
+    }
+    return { key: d.key, en: d.en, th: d.th, dow: d.dow, venues: venues };
   });
 
-  return { rows: rows };
+  return { days: days };
+}
+
+/** Split a cell like "20:00-22:00\nVenue" (or "20:00 Venue") into {time,name}. */
+function splitTimeName(text) {
+  var lines = text.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+  var time = '', name = '';
+  if (lines.length >= 2) { time = lines[0]; name = lines.slice(1).join(' '); }
+  else {
+    var m = (lines[0] || '').match(/^([\d\s:：?–\-]+?)([^\d\s:：?–\-].*)$/);
+    if (m) { time = m[1]; name = m[2]; } else { name = lines[0] || ''; }
+  }
+  return {
+    time: time.replace(/\s+/g, ' ').replace(/\s*[-–]\s*/g, '–').trim(),
+    name: name.replace(/\s+/g, ' ').trim(),
+  };
+}
+
+/** "#rrggbb" font color → status string (matches the sheet legend). */
+function statusFromHex(hex) {
+  if (!hex) return '';
+  var m = hex.replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (!m) return '';
+  var r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
+  var max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max < 0.22) return '';                                    // black-ish → no status
+  if (max - min < 0.12) return 'renovate';                      // grey
+  if (g >= r && g >= b && g - Math.max(r, b) > 0.08) return 'open';    // green
+  if (r >= g && r >= b && r - Math.max(g, b) > 0.08) return 'closed';  // red
+  if (b >= r && b >= g) return 'reserve';                       // blue
+  return '';
+}
+
+/** The Discord link on a cell (whole-cell link, or a link on part of it). */
+function cellLink(rt) {
+  if (!rt) return null;
+  var link = rt.getLinkUrl();
+  if (link) return link;
+  var runs = rt.getRuns();
+  for (var i = 0; i < runs.length; i++) {
+    var u = runs[i].getLinkUrl();
+    if (u) return u;
+  }
+  return null;
 }
 
 /** Live endpoint — the website falls back to this if schedule.json is missing. */
@@ -116,16 +185,3 @@ function installTrigger() {
   ScriptApp.newTrigger('publishJson').timeBased().everyMinutes(15).create();
   return 'trigger installed';
 }
-
-/* ── PHASE 1 SETUP (one time) ───────────────────────────────────────────────
- * 1. Create a GitHub token: github.com/settings/personal-access-tokens/new
- *      - Resource owner: darkhager
- *      - Only select repositories → Vrchat-Thai-World-Directory
- *      - Repository permissions → Contents → Read and write
- *    Generate, copy it.
- * 2. Here in Apps Script: Project Settings (gear) → Script properties →
- *    Add property  name: GITHUB_TOKEN  value: <the token>  → Save.
- * 3. Select publishJson in the toolbar → Run → authorize. Check the repo for
- *    schedule.json.
- * 4. Select installTrigger → Run once (creates the 15-min timer).
- * ─────────────────────────────────────────────────────────────────────────── */
