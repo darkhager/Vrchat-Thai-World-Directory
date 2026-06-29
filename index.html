@@ -230,12 +230,10 @@
 
 <script>
 /* ── LIVE SYNC CONFIG ──────────────────────────────────────────
-   Paste your Google Sheets API key below to turn on live sync.
-   (How to get one: see the README next to this file.)               */
+   Live sync now goes through a Google Apps Script (no API key in this page).
+   Paste your deployed Web-app URL (ends in /exec) below. See apps-script.gs.  */
 const CONFIG = {
-  sheetId: "1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U",
-  apiKey: "REMOVED-API-KEY",  // restricted to the site referrer
-  range: "A1:N20",       // generous window; day rows are matched by NAME (robust to row inserts)
+  scriptUrl: "https://script.google.com/macros/s/AKfycbwz9QcGQOfbhxMKuNaVhw-cnXrzH18pGl2uqu3JZRG_7A7Ax90mgWmFiCCrzN4AamE/exec",
   refreshMinutes: 15,    // re-pull from the sheet this often (0 = on load only)
 };
 
@@ -442,6 +440,12 @@ function splitTimeName(text){
     name: name.replace(/\s+/g,' ').trim(),
   };
 }
+function hexToRgb(hex){
+  if(!hex || typeof hex !== 'string') return null;
+  const m = hex.replace('#','').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if(!m) return null;
+  return { red:parseInt(m[1],16)/255, green:parseInt(m[2],16)/255, blue:parseInt(m[3],16)/255 };
+}
 function statusFromColor(c){
   if(!c) return '';
   const r=c.red||0, g=c.green||0, b=c.blue||0, max=Math.max(r,g,b), min=Math.min(r,g,b);
@@ -452,36 +456,33 @@ function statusFromColor(c){
   if(b>=r && b>=g) return 'reserve';                          // blue
   return '';
 }
-function applyLive(rowData){
-  // Match each day to the sheet row whose column A names it (robust to row inserts).
+function applyLive(rows){
+  // rows: [[{text,color,link,note}, …], …] from the Apps Script.
+  // Match each day to the row whose column A names it (robust to row inserts).
   const rowFor = {};
-  rowData.forEach(row => {
-    const a = (((row.values || [])[0] || {}).formattedValue || '').toLowerCase();
+  rows.forEach(cells => {
+    const a = ((cells[0] || {}).text || '').toLowerCase();
     SCHEDULE.forEach(day => {
       const key = day.en.toLowerCase().split(' ')[0];   // "monday" … "sunday" … "special"
-      if(a.includes(key) && !(day.key in rowFor)) rowFor[day.key] = row;
+      if(a.includes(key) && !(day.key in rowFor)) rowFor[day.key] = cells;
     });
   });
   return SCHEDULE.map(day => {
-    const row = rowFor[day.key];
-    if(!row) return day;                                // not found → keep the saved copy
-    const cells = row.values || [];
+    const cells = rowFor[day.key];
+    if(!cells) return day;                              // not found → keep the saved copy
     const venues = [];
     for(let ci=1; ci<cells.length; ci++){              // ci=0 is the day-label column
       const cell = cells[ci] || {};
-      const text = (cell.formattedValue || '').trim();
+      const text = (cell.text || '').trim();
       if(!text) continue;
       const { time, name } = splitTimeName(text);
       if(!name) continue;
-      const runs = cell.textFormatRuns || [];
-      const tf = (cell.effectiveFormat || {}).textFormat || {};
-      const color = tf.foregroundColor
-                 || (tf.foregroundColorStyle || {}).rgbColor
-                 || ((runs[0] || {}).format || {}).foregroundColor;
-      const discord = cell.hyperlink
-                 || runs.map(r => ((r.format||{}).link||{}).uri).find(Boolean);
-      const note = (cell.note || '').trim();
-      venues.push({ time, name, status: statusFromColor(color), discord, note });
+      venues.push({
+        time, name,
+        status: statusFromColor(hexToRgb(cell.color)),
+        discord: cell.link || '',
+        note: (cell.note || '').trim(),
+      });
     }
     return venues.length ? { ...day, venues } : day;
   });
@@ -491,19 +492,15 @@ function setSync(state, text){
   if(el){ el.textContent = text; el.dataset.state = state; }
 }
 async function fetchLive(){
-  if(!CONFIG.apiKey){ setSync('off','⚙ Live sync off — add your API key to enable'); return; }
+  if(!CONFIG.scriptUrl){ setSync('off','⚙ Live sync off — add your Apps Script URL to enable'); return; }
   setSync('sync','⟳ Syncing…');
-  const fields = 'sheets.data.rowData.values(formattedValue,note,hyperlink,effectiveFormat.textFormat(foregroundColor,foregroundColorStyle),textFormatRuns)';
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}`
-            + `?ranges=${encodeURIComponent(CONFIG.range)}&includeGridData=true`
-            + `&fields=${encodeURIComponent(fields)}&key=${CONFIG.apiKey}`;
   try{
-    const res = await fetch(url);
+    const res = await fetch(CONFIG.scriptUrl);
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
-    const rowData = ((((json.sheets||[])[0]||{}).data||[])[0]||{}).rowData || [];
-    if(!rowData.length) throw new Error('no data in range');
-    render(applyLive(rowData));
+    const rows = json.rows || [];
+    if(!rows.length) throw new Error('no data');
+    render(applyLive(rows));
     const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
     setSync('live','● Live · synced from the Google Sheet at ' + t);
   }catch(err){

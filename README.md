@@ -11,58 +11,51 @@ itself live** from that sheet (times, venue names, status colors, Discord links)
 
 ## Turn on live sync (one-time, ~5 minutes)
 
-The site reads the sheet through the **Google Sheets API**, which needs a free
-API key. The sheet is already shared "anyone with the link can view," which is
-all the key needs.
+The site reads the sheet through a **Google Apps Script** web app — no API key
+lives in the page. The script runs as you, reads the sheet, and returns only the
+schedule as JSON, so you can keep the sheet **private**.
 
-### 1. Create the API key
-1. Go to **https://console.cloud.google.com/** and sign in.
-2. Top bar → **Select a project** → **New Project** → name it anything → **Create**.
-3. Search bar → type **"Google Sheets API"** → open it → **Enable**.
-4. Left menu → **APIs & Services → Credentials** → **+ Create credentials → API key**.
-5. Copy the key it shows you.
+### 1. Create the script
+1. Open **https://script.google.com** → **New project**.
+2. Delete the sample code, paste everything from **`apps-script.gs`** (next to this file), **Save**.
 
-### 2. (Recommended) Lock the key down
-Still on the Credentials page, click your new key → **Edit**:
-- **Application restrictions → Websites** → add the sites that may use it, e.g.
-  - `http://127.0.0.1:8753/*` and `http://localhost/*` (for local testing)
-  - `https://YOURNAME.github.io/*` (once it's on GitHub Pages)
-- **API restrictions → Restrict key →** check **Google Sheets API** only.
-- **Save.**
+### 2. Deploy it as a Web app
+1. **Deploy → New deployment → gear icon → Web app.**
+2. Set **Execute as: Me** and **Who has access: Anyone** → **Deploy**.
+3. **Authorize access** → pick your account → **Allow**.
+4. Copy the **Web app URL** (it ends in `/exec`).
 
-> The key will be visible in the page source — that's expected for this setup.
-> Restricting it to your site + read-only Sheets keeps the risk low (it can only
-> read this already-public sheet).
-
-### 3. Paste the key into the site
+### 3. Paste the URL into the site
 Open `index.html`, find the `CONFIG` block near the top of the `<script>`:
 
 ```js
 const CONFIG = {
-  sheetId: "1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U",
-  apiKey: "",            // ← PASTE YOUR API KEY HERE between the quotes
-  range: "A3:M10",       // the day rows in the sheet (Monday … Special)
+  scriptUrl: "",         // ← PASTE YOUR /exec URL HERE between the quotes
   refreshMinutes: 15,    // re-pull from the sheet this often (0 = on load only)
 };
 ```
 
-Paste the key between the quotes on the `apiKey` line and save.
+Paste the URL between the quotes on the `scriptUrl` line and save.
 
 ### 4. Test
 Open the page. The footer should change from
 "⚙ Live sync off" to **"● Live · synced from the Google Sheet at HH:MM"**.
 It re-syncs on every page load and every `refreshMinutes` minutes.
 
+> **Editing the script later:** Deploy → **Manage deployments** → edit the existing
+> one → Version **New version** → Deploy. The `/exec` URL stays the same.
+
 ---
 
 ## How it reads the sheet
 
-- **Rows:** `range: "A3:M10"` = the 8 day rows (Monday … Special Pattern), in order.
-  If you add/remove day rows in the sheet, update this range.
+- **Rows:** the script returns the whole used range; the site matches the 8 day
+  rows by the day **name** in column A, so adding/moving rows won't break it.
 - **Each cell** becomes a venue: the leading time (e.g. `20:00-22:00` or `??:??`)
   is split from the venue name automatically.
-- **Text color → status** (matches the sheet's legend):
+- **Font color → status** (matches the sheet's legend):
   - green → free entry · grey → renovating · red → closed this week · blue → reserve
 - **A hyperlink on the cell → the venue's Discord link** (the name becomes clickable).
+- **A note on the cell → shown under the venue** (e.g. Special Pattern opening rules).
 
 So once sync is on, you just edit the Google Sheet as usual and the website follows.
