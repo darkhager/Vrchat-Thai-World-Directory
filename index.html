@@ -479,7 +479,7 @@ function timelineHTML(schedule){
 
 /* Layout 3 — Activity feed (today-first, date-grouped: open shops + events) */
 const WD = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function gmt7Base(){                                   // a Date whose local fields read as GMT+7
   const utc = Date.now() + new Date().getTimezoneOffset() * 60000;
   return new Date(utc + 7 * 3600000);
@@ -491,7 +491,7 @@ function eventDateKey(ev){
 }
 function venueItemHTML(v){
   const inner = `<div class="fi-main"><div class="fi-top">`
-    + `<span class="fi-name">${esc(v.name)}</span><span class="fi-time">${esc(v.time)}</span></div>`
+    + `<span class="fi-time">${esc(v.time)}</span><span class="fi-name">${esc(v.name)}</span></div>`
     + (v.note ? `<span class="fi-note">📝 ${esc(v.note)}</span>` : '') + `</div>`;
   return v.discord
     ? `<a class="feed-item" href="${esc(v.discord)}" target="_blank" rel="noopener"><i class="dot ${v.status||''}"></i>${inner}</a>`
@@ -499,8 +499,8 @@ function venueItemHTML(v){
 }
 function eventItemHTML(ev){
   const inner = `<div class="fi-main"><div class="fi-top">`
-    + `<span class="fi-name">${esc(ev.name||'Event')}</span><span class="fi-tag">Event</span>`
-    + (ev.time ? `<span class="fi-time">${esc(ev.time)}</span>` : '') + `</div>`
+    + (ev.time ? `<span class="fi-time">${esc(ev.time)}</span>` : '')
+    + `<span class="fi-name">${esc(ev.name||'Event')}</span><span class="fi-tag">Event</span></div>`
     + (ev.by ? `<span class="fi-by">by ${esc(ev.by)}</span>` : '')
     + (ev.note ? `<span class="fi-note">📝 ${esc(ev.note)}</span>` : '') + `</div>`;
   const dot = `<i class="dot" style="background:#b9a3ff"></i>`;
@@ -520,7 +520,7 @@ function activityHTML(schedule, events){
     const dt = new Date(base.getTime() + i * 86400000);
     const dow = dt.getDay(), dkey = dt.toDateString();
     const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : WD[dow];
-    const sub = `${MON[dt.getMonth()]} ${dt.getDate()}`;
+    const sub = `${dt.getDate()} ${MON[dt.getMonth()]} ${dt.getFullYear()}`;
     const venues = byDow[dow] ? byDow[dow].venues : [];
     const dayEv = evList.filter((ev, idx) => { if(eventDateKey(ev) === dkey){ used.add(idx); return true; } return false; });
     let items = dayEv.map(eventItemHTML).join('') + venues.map(venueItemHTML).join('');
