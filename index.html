@@ -194,7 +194,7 @@
   }
 
   /* ── Top page tabs (Activity / Schedule) ── */
-  .tabs{display:inline-flex;gap:5px;margin:20px auto 0;background:var(--pill);
+  .tabs{display:inline-flex;gap:5px;margin:0;background:var(--pill);
     border:1px solid var(--line);border-radius:999px;padding:5px}
   .tabs button{font-family:inherit;border:none;background:transparent;color:var(--muted);
     padding:9px 24px;border-radius:999px;font-size:15px;font-weight:600;cursor:pointer;
@@ -249,14 +249,13 @@
     <h1>ตารางหนีเที่ยว Vrchat Thailand</h1>
     <p class="subtitle">สร้างจาก Token Claude เหลือใช้</p>
     <div class="meta">
-      <span class="badge">🕒 Time zone <b>GMT/UTC +7</b></span>
+      <div class="tabs" id="pageTabs" role="tablist" aria-label="Choose page">
+        <button type="button" data-page="activity">📰 Activity</button>
+        <button type="button" data-page="schedule">📅 Schedule</button>
+      </div>
       <a class="btn" href="https://vrchat.com/home/group/grp_0d413f3b-45dc-48d8-837c-ec7bc1ea3d44" target="_blank" rel="noopener">＋ Join VRChat Group</a>
       <button class="toggle" id="filterToggle" type="button" aria-label="Filter open venues">🟢 Open only</button>
       <button class="toggle" id="themeToggle" type="button" aria-label="Toggle dark / light mode">🌙 Dark</button>
-    </div>
-    <div class="tabs" id="pageTabs" role="tablist" aria-label="Choose page">
-      <button type="button" data-page="activity">📰 Activity</button>
-      <button type="button" data-page="schedule">📅 Schedule</button>
     </div>
   </header>
 
