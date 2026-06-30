@@ -292,6 +292,7 @@
       <a href="https://docs.google.com/spreadsheets/d/1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U/edit" target="_blank" rel="noopener">Original Google Sheet</a>
     </div>
     <div id="sync" data-state="off">⚙ Live sync off — add your API key to enable</div>
+    <div id="visits" hidden>👀 <b>—</b> visits · ผู้เข้าชม</div>
   </footer>
 </div>
 
@@ -306,6 +307,11 @@ const CONFIG = {
   scriptUrl: "https://script.google.com/macros/s/AKfycbwz9QcGQOfbhxMKuNaVhw-cnXrzH18pGl2uqu3JZRG_7A7Ax90mgWmFiCCrzN4AamE/exec",  // fallback
   refreshMinutes: 15,    // re-pull this often (0 = on load only)
 };
+
+/* ── VISIT COUNTER ─────────────────────────────────────────────
+   Keyless public hit counter (abacus.jasoncameron.dev). Total visits
+   only — one count per browser session. No account, no secret. */
+const COUNTER = { ns: "vrchat-thai-world-directory", key: "visits" };
 
 /* ═══════════════════════════════════════════════════════════════
    SAVED SCHEDULE — shown instantly, and used if live sync is off or
@@ -636,8 +642,24 @@ async function fetchEvents(){
     draw();
   }catch(err){ /* feed just shows shops if events can't load */ }
 }
+async function trackVisits(){
+  const counted = sessionStorage.getItem('vcounted');   // count once per session
+  const op = counted ? 'get' : 'hit';                    // hit = +1, get = read only
+  try{
+    const res = await fetch(`https://abacus.jasoncameron.dev/${op}/${COUNTER.ns}/${COUNTER.key}`);
+    if(!res.ok) return;
+    const j = await res.json();
+    if(typeof j.value !== 'number') return;
+    if(!counted) sessionStorage.setItem('vcounted','1');
+    const box = document.getElementById('visits');
+    box.querySelector('b').textContent = j.value.toLocaleString();
+    box.hidden = false;                                  // reveal only once we have a real number
+  }catch(err){ /* counter stays hidden if it can't load */ }
+}
+
 fetchLive();
 fetchEvents();
+trackVisits();
 if(CONFIG.refreshMinutes > 0) setInterval(() => { fetchLive(); fetchEvents(); }, CONFIG.refreshMinutes * 60000);
 </script>
 </body>
