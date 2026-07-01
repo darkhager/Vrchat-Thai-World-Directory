@@ -1,3 +1,13 @@
 {
-  "events": []
+  "events": [
+    {
+      "name": "Test - Event",
+      "by": "Darkhager",
+      "type": "One time",
+      "date": "6/29/2026",
+      "time": "",
+      "link": "",
+      "note": ""
+    }
+  ]
 }
