@@ -184,6 +184,17 @@
   .tg-block.closed{background:var(--st-closed);border-color:var(--st-closed-bd)}
   .tg-block.flex{border-style:dashed}
 
+  /* ── "Open right now" live glow (venue currently within its hours today) ── */
+  @keyframes liveGlow{
+    0%,100%{box-shadow:0 0 0 1.5px var(--st-open-bd),0 0 8px 1px rgba(74,222,140,.5)}
+    50%    {box-shadow:0 0 0 1.5px rgba(74,222,140,.95),0 0 20px 5px rgba(74,222,140,.85)}
+  }
+  .venue.live,.feed-item.live,.tg-block.live{animation:liveGlow 1.8s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){
+    .venue.live,.feed-item.live,.tg-block.live{
+      animation:none;box-shadow:0 0 0 1.5px rgba(74,222,140,.9),0 0 16px 3px rgba(74,222,140,.7)}
+  }
+
   @media (max-width:660px){
     .day-row{flex-direction:column}
     .day-label{flex:none;flex-direction:row;align-items:center;gap:8px;border-right:none;
@@ -398,7 +409,8 @@ function tableHTML(schedule){
         ? `<a class="v-name" href="${esc(v.discord)}" target="_blank" rel="noopener">${esc(v.name)}</a>`
         : `<span class="v-name">${esc(v.name)}</span>`;
       const noteHtml = v.note ? `<span class="v-note">📝 ${esc(v.note)}</span>` : '';
-      return `<div class="venue ${v.status||''}"><span class="time">${esc(v.time)}</span>${nameHtml}${noteHtml}</div>`;
+      const live = isLiveNow(v, day) ? ' live' : '';
+      return `<div class="venue ${v.status||''}${live}"><span class="time">${esc(v.time)}</span>${nameHtml}${noteHtml}</div>`;
     }).join('');
     return `<div class="day-row d-${day.key}${isToday?' today':''}">
       <div class="day-label">
@@ -419,6 +431,16 @@ function parseRange(t){
   let e = (+m[3])*60 + (+m[4]);
   if(e <= s) e += 1440;                 // crosses midnight (… – 00:00)
   return { s, e };
+}
+/* Is this venue open right now? (its day is today in GMT+7 and the clock is inside its hours) */
+function isLiveNow(v, day){
+  if(!day || day.dow === undefined || day.dow !== todayDow) return false;
+  if(v.status !== 'open') return false;                 // only genuinely-open venues glow
+  const r = parseRange(v.time);
+  if(!r) return false;                                  // flexible "??:??" times can't be "now"
+  const b = gmt7Base();
+  const now = b.getHours()*60 + b.getMinutes();
+  return now >= r.s && now < r.e;
 }
 function venueIcon(name){
   const n = name.toLowerCase();
@@ -465,7 +487,7 @@ function timelineHTML(schedule){
       const label = `${venueIcon(v.name)} ${esc(v.name)}`;
       const pos = r ? `left:${(r.s-START)/SPAN*100}%;width:${(r.e-r.s)/SPAN*100}%`
                     : `left:1%;width:34%`;
-      const cls = `tg-block ${v.status||''}${r ? '' : ' flex'}`;
+      const cls = `tg-block ${v.status||''}${r ? '' : ' flex'}${isLiveNow(v, day) ? ' live' : ''}`;
       const style = `${pos};top:${blockTop}px;height:${h}px`;
       const noteLine = hasNote ? `<span class="tg-note">📝 ${esc(v.note)}</span>` : '';
       const inner = `<span class="nm">${label}</span><span class="tm">${esc(v.time)}</span>${noteLine}`;
@@ -494,13 +516,14 @@ function eventDateKey(ev){
   const d = new Date(ev.date);
   return isNaN(d) ? null : d.toDateString();
 }
-function venueItemHTML(v){
+function venueItemHTML(v, day){
+  const live = isLiveNow(v, day) ? ' live' : '';
   const inner = `<div class="fi-main"><div class="fi-top">`
     + `<span class="fi-time">${esc(v.time)}</span><span class="fi-name">${esc(v.name)}</span></div>`
     + (v.note ? `<span class="fi-note">📝 ${esc(v.note)}</span>` : '') + `</div>`;
   return v.discord
-    ? `<a class="feed-item" href="${esc(v.discord)}" target="_blank" rel="noopener"><i class="dot ${v.status||''}"></i>${inner}</a>`
-    : `<div class="feed-item"><i class="dot ${v.status||''}"></i>${inner}</div>`;
+    ? `<a class="feed-item${live}" href="${esc(v.discord)}" target="_blank" rel="noopener"><i class="dot ${v.status||''}"></i>${inner}</a>`
+    : `<div class="feed-item${live}"><i class="dot ${v.status||''}"></i>${inner}</div>`;
 }
 function eventItemHTML(ev){
   const inner = `<div class="fi-main"><div class="fi-top">`
@@ -528,7 +551,7 @@ function activityHTML(schedule, events){
     const sub = `${dt.getDate()} ${MON[dt.getMonth()]} ${dt.getFullYear()}`;
     const venues = byDow[dow] ? byDow[dow].venues : [];
     const dayEv = evList.filter((ev, idx) => { if(eventDateKey(ev) === dkey){ used.add(idx); return true; } return false; });
-    let items = dayEv.map(eventItemHTML).join('') + venues.map(venueItemHTML).join('');
+    let items = dayEv.map(eventItemHTML).join('') + venues.map(v => venueItemHTML(v, byDow[dow])).join('');
     if(!items) items = `<div class="feed-empty">No open venues · ไม่มีร้านเปิด</div>`;
     html += `<div class="feed-group"><div class="feed-date">${label}<span>${esc(sub)}</span></div>${items}</div>`;
   }
@@ -536,7 +559,7 @@ function activityHTML(schedule, events){
   if(extra.length)
     html += `<div class="feed-group"><div class="feed-date">📅 More events<span>upcoming</span></div>${extra.map(eventItemHTML).join('')}</div>`;
   if(spc && spc.venues.length)
-    html += `<div class="feed-group"><div class="feed-date">🗓 Special / pattern<span>${esc(spc.th || '')}</span></div>${spc.venues.map(venueItemHTML).join('')}</div>`;
+    html += `<div class="feed-group"><div class="feed-date">🗓 Special / pattern<span>${esc(spc.th || '')}</span></div>${spc.venues.map(v => venueItemHTML(v, spc)).join('')}</div>`;
   return html + '</div>';
 }
 
