@@ -218,6 +218,7 @@
     max-width:760px;margin:22px auto 6px}
   .toolbar.center{justify-content:center}
   .toolbar[hidden]{display:none}
+  .legend[hidden],.note[hidden]{display:none}
   .ef{display:flex;flex-direction:column;gap:2px;text-align:left}
   .ef-title{font-size:16.5px;font-weight:700;color:var(--ink)}
   .ef-sub{font-size:12.5px;color:var(--muted);font-weight:300}
@@ -251,6 +252,44 @@
   .fi-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
     padding:2px 8px;border-radius:999px;background:rgba(140,100,255,.22);color:#b9a3ff;align-self:center}
   .feed-empty{color:var(--muted);font-size:13px;font-style:italic;padding:2px 6px 10px}
+
+  /* ── Newbie guide (คู่มือมือใหม่) ── */
+  .guide{max-width:680px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:18px;box-shadow:var(--shadow);padding:24px 22px;line-height:1.6}
+  .guide h2{margin:0 0 4px;font-size:19px;color:var(--ink)}
+  .guide .lead{margin:0 0 6px;color:var(--muted);font-size:13.5px;font-weight:300}
+  /* Collapsible sections — "pop" a heading to reveal its details */
+  .guide details.gsec{border-top:1px solid var(--line)}
+  .guide details.gsec summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;
+    padding:15px 2px;font-size:16px;font-weight:600;color:var(--ink)}
+  .guide details.gsec summary::-webkit-details-marker{display:none}
+  .guide details.gsec summary::after{content:'▸';margin-left:auto;color:var(--muted);
+    font-size:13px;transition:transform .18s}
+  .guide details.gsec[open] summary::after{transform:rotate(90deg)}
+  .guide details.gsec summary:hover{color:var(--accent,#b9a3ff)}
+  .guide details.gsec > ol{padding:2px 0 18px}
+  .guide ol{margin:0;padding:0;list-style:none;counter-reset:step;display:grid;gap:12px}
+  .guide li{position:relative;padding-left:42px;counter-increment:step;font-size:14px;color:var(--ink)}
+  .guide li::before{content:counter(step);position:absolute;left:0;top:-1px;
+    width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+    font-weight:700;font-size:13px;color:#fff;
+    background:linear-gradient(95deg,#7c4dff,#d24ad0);box-shadow:0 6px 16px rgba(140,77,255,.28)}
+  .guide li b{color:var(--ink)}
+  .guide .sub{display:block;color:var(--muted);font-size:12.5px;margin-top:3px}
+  .guide .gsub{font-size:14px;font-weight:600;color:var(--ink);margin:16px 0 2px}
+  .guide .tr{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;
+    margin-right:6px;background:var(--c);box-shadow:0 0 7px 1px var(--c)}
+  .guide .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+  .guide img.gimg{display:block;width:100%;max-width:240px;height:auto;margin-top:9px;
+    border-radius:10px;border:1px solid var(--line)}
+  .guide img.gimg.wide{max-width:420px}
+  .guide .contact{margin:22px 0 0;padding-top:16px;border-top:1px solid var(--line);
+    font-size:13px;color:var(--muted)}
+  .guide a.gbtn{display:inline-flex;align-items:center;gap:6px;
+    padding:6px 13px;border-radius:999px;font-size:12px;font-weight:700;text-decoration:none;
+    color:#fff;background:linear-gradient(95deg,#7c4dff,#d24ad0);box-shadow:0 6px 16px rgba(140,77,255,.28)}
+  .guide a.gbtn.sec{background:var(--pill);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .guide a.gbtn:hover{filter:brightness(1.06)}
 </style>
 </head>
 <body>
@@ -263,6 +302,7 @@
       <div class="tabs" id="pageTabs" role="tablist" aria-label="Choose page">
         <button type="button" data-page="activity">📰 Activity</button>
         <button type="button" data-page="schedule">📅 Schedule</button>
+        <button type="button" data-page="guide">🐣 มือใหม่</button>
       </div>
       <a class="btn" href="https://vrchat.com/home/group/grp_0d413f3b-45dc-48d8-837c-ec7bc1ea3d44" target="_blank" rel="noopener">＋ Join VRChat Group</a>
       <button class="toggle" id="filterToggle" type="button" aria-label="Filter open venues">🟢 Open only</button>
@@ -284,14 +324,14 @@
     </div>
   </div>
 
-  <div class="legend">
+  <div class="legend" id="legend">
     <span><i class="dot open"></i> Free entry · เข้าได้เลย</span>
     <span><i class="dot reserve"></i> Reserve · ต้องจองก่อน</span>
     <span><i class="dot renovate"></i> Renovating · ปิดปรับปรุง</span>
     <span><i class="dot closed"></i> Closed this week · ปิดสัปดาห์นี้</span>
   </div>
 
-  <p class="note">📌 Link Discord แต่ละร้านสามารถกดเข้าไปที่ชื่อร้านได้เลย ข้อมูลเฉพาะของร้านสามารถกดดูได้จากหมายเหตุของแต่ละร้าน
+  <p class="note" id="venuenote">📌 Link Discord แต่ละร้านสามารถกดเข้าไปที่ชื่อร้านได้เลย ข้อมูลเฉพาะของร้านสามารถกดดูได้จากหมายเหตุของแต่ละร้าน
     <span class="en">Tap a venue's name to open its Discord — venue-specific details are in each venue's note.</span></p>
 
   <main class="table" id="table"></main>
@@ -397,7 +437,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 let currentData = SCHEDULE;
 let currentEvents = [];
 let openOnly = (localStorage.getItem('filter') || 'open') === 'open';
-let page = localStorage.getItem('page') || 'activity';     // 'activity' | 'schedule'
+let page = localStorage.getItem('page') || 'activity';     // 'activity' | 'schedule' | 'guide'
 let layout = localStorage.getItem('layout') || 'table';    // 'table' | 'timeline' (Schedule page)
 
 /* Layout 1 — Table (default) */
@@ -563,6 +603,95 @@ function activityHTML(schedule, events){
   return html + '</div>';
 }
 
+/* Guide page — คู่มือมือใหม่ (static, Thai-first; links reuse the site's real URLs) */
+function guideHTML(){
+  return `<section class="guide">
+    <h2>🐣 คู่มือมือใหม่</h2>
+    <p class="lead">รวมทุกเรื่องที่ควรรู้สำหรับมือใหม่ — แตะที่หัวข้อเพื่อเปิดดูรายละเอียดได้เลยนะ · Tap a heading to pop it open</p>
+
+    <details class="gsec" name="gsec" open>
+      <summary>🎮 เริ่มต้นใช้งาน VRChat</summary>
+      <ol>
+        <li>ติดตั้ง VRChat (ฟรี) — เล่นได้ทั้งบน PC ผ่าน Steam และบน Meta Quest หากยังไม่มีแว่น VR ก็เล่นบนคอมได้เลยนะ
+          <div class="btnrow">
+            <a class="gbtn" href="https://vrchat.com/home/download" target="_blank" rel="noopener">📥 โหลด VRChat ↗</a>
+          </div>
+        </li>
+        <li>สมัครบัญชีและเลือกอวตารที่ชื่นชอบได้เลย</li>
+        <li>เชื่อมบัญชี Steam เข้ากับบัญชี VRChat ให้เรียบร้อยนะ</li>
+      </ol>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>🛡️ Trust Rank & วิธีเลเวลอัป</summary>
+      <p class="sub" style="margin-top:6px">Trust Rank คือระดับความน่าเชื่อถือของบัญชีใน VRChat ดูได้จากสีของป้ายชื่อ ยิ่งระดับสูงก็ยิ่งปลดล็อกสิทธิ์มากขึ้น (เช่น การอัปโหลดอวตารหรือเวิลด์) เรียงจากน้อยไปมากดังนี้นะ</p>
+      <ol>
+        <li><span class="tr" style="--c:#b0b0b0"></span>Visitor <span class="sub" style="display:inline">— ผู้เล่นใหม่ที่เพิ่งเริ่ม</span></li>
+        <li><span class="tr" style="--c:#1f92ff"></span>New User</li>
+        <li><span class="tr" style="--c:#2bcf5c"></span>User</li>
+        <li><span class="tr" style="--c:#ff7b42"></span>Known User</li>
+        <li><span class="tr" style="--c:#b18cff"></span>Trusted User <span class="sub" style="display:inline">— น่าเชื่อถือสูงสุดในระดับผู้เล่นทั่วไป</span></li>
+      </ol>
+      <p class="gsub">วิธีเพิ่ม Trust Rank</p>
+      <ol>
+        <li>ใช้เวลาเล่นอย่างสม่ำเสมอ ยิ่งเล่นนานและต่อเนื่อง Trust ก็จะค่อย ๆ เพิ่มขึ้นนะ</li>
+        <li>เพิ่มเพื่อนและพูดคุยกับผู้คน การเข้าสังคมช่วยเพิ่มความน่าเชื่อถือ</li>
+        <li>ลองสร้างและอัปโหลดคอนเทนต์ เช่น World หรือ Avatar (ต้องเป็น New User ขึ้นไปจึงจะอัปโหลดได้นะ)</li>
+        <li>ประพฤติตัวดีและรักษามารยาท หลีกเลี่ยงการถูกบล็อกหรือรายงานจากผู้อื่น (หากถูกลงโทษหนัก ๆ อาจถูกจัดเป็น Nuisance ซึ่งเป็นระดับติดลบได้)</li>
+        <li>บัญชียิ่งมีอายุการใช้งานนาน ก็ยิ่งช่วยเรื่อง Trust</li>
+      </ol>
+      <p class="sub">หมายเหตุ: VRChat ไม่ได้เปิดเผยสูตรคำนวณ Trust อย่างละเอียด ข้อมูลนี้จึงเป็นแนวทางคร่าว ๆ ที่ทราบกันโดยทั่วไปนะ · และ Trust Rank (สีป้ายชื่อ) เป็นคนละอย่างกับ Avatar Quality สีเขียวที่กล่าวถึงด้านล่าง</p>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>🚪 วิธีเข้าร้าน</summary>
+      <ol>
+        <li>เข้าร่วม Discord ของร้านที่สนใจก่อนนะ</li>
+        <li>โปรดอ่านกฎของร้านให้เรียบร้อย</li>
+        <li>Add เจ้าของร้านหรือผู้เปิดร้านเป็นเพื่อน หรือกด Join Group เพื่อเข้าร้านได้เลย
+          <div class="btnrow">
+            <a class="gbtn sec" href="https://vrchat.com/home/user/usr_4e80f205-e770-49ed-8655-824478be48f0" target="_blank" rel="noopener">👤 ตัวอย่าง Link คน ↗</a>
+            <a class="gbtn sec" href="https://vrc.group/TRNEWS.5867" target="_blank" rel="noopener">👥 ตัวอย่าง Link กลุ่ม ↗</a>
+          </div>
+        </li>
+        <li>เข้าร่วมได้ตามวันและเวลาที่แสดงในตารางหรือประกาศของร้านนะ</li>
+      </ol>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>✨ คำแนะนำในการเที่ยวร้าน</summary>
+      <ol>
+        <li>มีน้ำใจและเป็นมิตรกับทุกคน ปรับระดับเสียงไมค์ให้พอดี รักษามารยาท และปรับขนาดอวตารให้เหมาะสม แม้จะเป็นเกม แต่ผู้คนในเกมคือคนจริง ๆ นะ</li>
+        <li>แนะนำให้ใช้อวตารที่มี Quality สีเขียว (Excellent) จะเข้าได้ทุกร้านเลยนะ
+          <img class="gimg" src="img/avatar-quality-green.png" alt="ตัวอย่างอวตารที่มี Quality สีเขียว (Excellent)" loading="lazy"></li>
+        <li>หากเครื่องคอมไม่แรง แนะนำให้เปิด Safety Custom แล้วเปิดแสดงเฉพาะอวตารของเพื่อน หรือเปิดเท่าที่จำเป็น
+          <img class="gimg wide" src="img/safety-custom.png" alt="หน้าตั้งค่า Safety Shield Levels ใน VRChat" loading="lazy"></li>
+        <li>หากทำผิดกฎจนถูก Blacklist อาจถูกแบนพร้อมกันหลายร้านได้นะ</li>
+        <li>โปรดจำไว้ว่ากฎหมายมีผลบังคับใช้ในเกมด้วยเช่นกัน</li>
+      </ol>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>🏠 คำแนะนำในการเปิดร้าน</summary>
+      <ol>
+        <li>เริ่มจากคิด Theme หรือคอนเซ็ปต์ของร้านที่อยากเปิดก่อนนะ</li>
+        <li>เตรียม World สำหรับเปิดร้าน จะลงมือทำเองหรือจ้างผู้อื่นทำก็ได้
+          <span class="sub">โปรดพิจารณาผลงานและความรับผิดชอบของผู้รับจ้างด้วยวิจารณญาณนะ</span></li>
+        <li>ชวนเพื่อนมาร่วมทีมช่วยกันดูแล</li>
+        <li>เปิดร้านเวลาไหนก็ได้ตามสะดวก ไม่ต้องกังวลว่าจะไปทับเวลาคนอื่น เพราะลูกค้าจะเลือกเที่ยวเองนะ</li>
+        <li>เปิดได้ตามศรัทธาเลย ทางเรายินดีลงตารางให้ฟรีนะ
+          <div class="btnrow">
+            <a class="gbtn" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 Submit an Event ↗</a>
+          </div>
+        </li>
+        <li>การเป็น Partner โปรดพิจารณาให้รอบคอบ เพราะใน VRChat ก็มีผู้คนที่ไม่ถูกกันอยู่บ้าง แนะนำให้ศึกษาสภาพแวดล้อมก่อนตัดสินใจ แต่ถ้าเปิดเอาสนุกก็ไม่ต้องกังวลนะ ขอให้สนุกกับการเล่นเกมกับเพื่อน ๆ!</li>
+      </ol>
+    </details>
+
+    <p class="contact">🙋 หากมีข้อสงสัย สอบถามเพิ่มเติมได้ที่ Discord: <b>darkhager</b> ได้เลยนะ</p>
+  </section>`;
+}
+
 /* Apply the "Open only" filter (request: feed shows only sure-open shops) */
 function visibleData(){
   return openOnly
@@ -572,7 +701,11 @@ function visibleData(){
 function draw(){
   const data = visibleData();
   const el = document.getElementById('table');
-  if(page === 'activity'){
+  if(page === 'guide'){
+    el.className = '';
+    // don't re-render on data refresh — it would collapse any section the reader popped open
+    if(!el.querySelector('.guide')) el.innerHTML = guideHTML();
+  }else if(page === 'activity'){
     el.className = '';
     el.innerHTML = activityHTML(data, currentEvents);
   }else{
@@ -599,6 +732,9 @@ function paintPage(){
   [...layoutSeg.children].forEach(b => b.classList.toggle('on', b.dataset.layout === layout));
   document.getElementById('actbar').hidden = page !== 'activity';
   document.getElementById('schedbar').hidden = page !== 'schedule';
+  const onGuide = page === 'guide';               // legend + venue note are schedule-only
+  document.getElementById('legend').hidden = onGuide;
+  document.getElementById('venuenote').hidden = onGuide;
 }
 pageTabs.addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
