@@ -231,13 +231,6 @@
       "venues": [
         {
           "time": "19:00–21:00",
-          "name": "MAID CAFE MAHO",
-          "status": "renovate",
-          "discord": "https://discord.gg/9GsWtmjNx7",
-          "note": ""
-        },
-        {
-          "time": "19:00–21:00",
           "name": "Teapot House VR Thailand",
           "status": "open",
           "discord": "https://discord.gg/ftCX9jt83Y",
@@ -299,13 +292,6 @@
           "status": "open",
           "discord": "https://discord.gg/dC6mYHq9Up",
           "note": "อาจจะเปิดวันไหนก็ได้"
-        },
-        {
-          "time": "??–??",
-          "name": "Bar 13 after midnight",
-          "status": "open",
-          "discord": "https://discord.gg/Q9u3hgppm",
-          "note": ""
         }
       ]
     }
