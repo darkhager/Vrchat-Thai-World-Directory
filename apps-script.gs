@@ -185,9 +185,14 @@ function ghCommit(path, json) {
 function publishJson()   { return ghCommit(GH_PATH,     JSON.stringify(buildPayload(), null, 2)); }
 function publishEvents() { return ghCommit(EVENTS_PATH, JSON.stringify(buildEvents(),  null, 2)); }
 
-/** Publish both data files. This is what the timer runs. */
+/** Publish both data files, then push new approvals to Discord + the calendar.
+ *  This is what the timer runs. Notify/sync is wrapped so a Discord or Calendar
+ *  hiccup can never block the core publish. */
 function publishAll() {
-  return 'schedule:' + publishJson() + ' | events:' + publishEvents();
+  var out = 'schedule:' + publishJson() + ' | events:' + publishEvents();
+  try { out += ' | ' + notifyAndSyncEvents(); }
+  catch (e) { out += ' | notify error: ' + e; }
+  return out;
 }
 
 /* ── Event Feeds (from the Google Form responses sheet) ─────────────────────── */
@@ -256,6 +261,226 @@ function buildEvents() {
     });
   }
   return { events: events };
+}
+
+/* ── Discord broadcast bot + Google Calendar sync ────────────────────────────
+   When a row is APPROVED, post it once to a Discord ANNOUNCEMENT channel via a
+   bot, auto-publish it so every server that "Follows" the channel gets it, and
+   add it to a calendar. Idempotent: each row is marked so the timer never repeats.
+
+   Project Settings → Script properties:
+     DISCORD_BOT_TOKEN  — the bot's token (Developer Portal → Bot → Reset Token).
+     DISCORD_CHANNEL_ID — id of the Announcement channel the bot posts to.
+     CALENDAR_ID        — (optional) a specific calendar id; otherwise a dedicated
+                          "VRChat Thailand Events" calendar is created on first run.
+
+   The bot needs only SEND_MESSAGES in that channel, and the channel must be an
+   Announcement channel in a Community-enabled server (so others can Follow it).
+   Run setupEventTracking() ONCE: it adds the marker columns, creates the
+   calendar, and triggers the one-time Calendar authorization prompt. No
+   redeploy is needed — the timer runs the latest SAVED code. */
+
+const ANNOUNCED_HEADER = 'Announced';    // Discord post marker (ISO timestamp)
+const CAL_ID_HEADER    = 'CalEventId';   // Google Calendar event / series id
+const CAL_NAME         = 'VRChat Thailand Events';
+const EVENT_HOURS      = 2;              // default duration for a timed event
+
+/** Run ONCE: add the marker columns + create the calendar (prompts Calendar auth). */
+function setupEventTracking() {
+  const sheet = eventsSheet_();
+  ensureColumn_(sheet, ANNOUNCED_HEADER);
+  ensureColumn_(sheet, CAL_ID_HEADER);
+  const cal = eventsCalendar_();
+  Logger.log('Calendar ready: "%s"  (id: %s)', cal.getName(), cal.getId());
+  Logger.log('To let people subscribe: Google Calendar → Settings for this ' +
+             'calendar → make it public, then copy the public iCal / subscribe URL.');
+  return 'tracking columns + calendar ready (see Logs for the calendar id)';
+}
+
+/** Find a header column by exact name, creating it at the end if missing. */
+function ensureColumn_(sheet, header) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const at = headers.indexOf(header);
+  if (at !== -1) return at + 1;
+  const col = sheet.getLastColumn() + 1;
+  sheet.getRange(1, col).setValue(header);
+  return col;
+}
+
+/** The dedicated events calendar (cached id in Script properties). */
+function eventsCalendar_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('CALENDAR_ID');
+  if (id) { const c = CalendarApp.getCalendarById(id); if (c) return c; }
+  const found = CalendarApp.getCalendarsByName(CAL_NAME);
+  const cal = found.length ? found[0] : CalendarApp.createCalendar(CAL_NAME);
+  props.setProperty('CALENDAR_ID', cal.getId());
+  return cal;
+}
+
+/** For each APPROVED row not yet handled: post to Discord and add to the
+ *  calendar, then mark it. Called by publishAll() after publishing. */
+function notifyAndSyncEvents() {
+  const sheet = eventsSheet_();
+  const disp = sheet.getDataRange().getDisplayValues();   // human text
+  const vals = sheet.getDataRange().getValues();          // real Date objects
+  if (disp.length < 2) return 'no rows';
+
+  const H = disp[0];
+  function idx(substr) {
+    for (var i = 0; i < H.length; i++) {
+      if (String(H[i]).toLowerCase().indexOf(substr) !== -1) return i;
+    }
+    return -1;
+  }
+  const cStatus = idx('status'),
+        cName = idx('event name'), cBy = idx('event by'),
+        cType = idx('event type'), cLink = idx('event links'), cNote = idx('note'),
+        cAnn = H.indexOf(ANNOUNCED_HEADER), cCal = H.indexOf(CAL_ID_HEADER);
+  if (cStatus < 0 || cAnn < 0 || cCal < 0) return 'run setupEventTracking() first';
+
+  const dateCols = [idx('one time event date'), idx('weekly event date'), idx('special pattern')];
+  const timeCols = [idx('one time event time'), idx('weekly event time'), idx('special event time')];
+  const props    = PropertiesService.getScriptProperties();
+  const botToken = props.getProperty('DISCORD_BOT_TOKEN');
+  const channelId = props.getProperty('DISCORD_CHANNEL_ID');
+
+  var posted = 0, synced = 0;
+  for (var r = 1; r < disp.length; r++) {
+    if (String(disp[r][cStatus]).trim().toLowerCase() !== 'approved') continue;
+    const name = cName >= 0 ? String(disp[r][cName]).trim() : '';
+    if (!name) continue;
+
+    // Which date group (0=one-time, 1=weekly, 2=special) is filled in?
+    var g = -1;
+    for (var k = 0; k < dateCols.length; k++) {
+      if (dateCols[k] >= 0 && String(disp[r][dateCols[k]]).trim()) { g = k; break; }
+    }
+    const dateStr = g >= 0 ? String(disp[r][dateCols[g]]).trim() : '';
+    const timeStr = g >= 0 && timeCols[g] >= 0 ? String(disp[r][timeCols[g]]).trim() : '';
+    const ev = {
+      name: name,
+      by:   cBy   >= 0 ? String(disp[r][cBy]).trim()   : '',
+      type: cType >= 0 ? String(disp[r][cType]).trim() : '',
+      link: cLink >= 0 ? String(disp[r][cLink]).trim() : '',
+      note: cNote >= 0 ? String(disp[r][cNote]).trim() : '',
+      dateStr: dateStr, timeStr: timeStr,
+    };
+
+    // 1) Discord — once per row.
+    if (botToken && channelId && !String(disp[r][cAnn]).trim()) {
+      if (postDiscord_(botToken, channelId, ev)) {
+        sheet.getRange(r + 1, cAnn + 1).setValue(new Date().toISOString());
+        posted++;
+      }
+    }
+
+    // 2) Calendar — once per row, only if we can place it on a date.
+    if (!String(disp[r][cCal]).trim()) {
+      const when = combineDateTime_(
+        g >= 0 ? vals[r][dateCols[g]] : '',
+        g >= 0 && timeCols[g] >= 0 ? vals[r][timeCols[g]] : '',
+        dateStr, timeStr);
+      if (when) {
+        const id = createCalEvent_(ev, when, g === 1 /* weekly */);
+        if (id) { sheet.getRange(r + 1, cCal + 1).setValue(id); synced++; }
+      }
+    }
+  }
+  return 'discord:' + posted + ' calendar:' + synced;
+}
+
+/** Post one event to the Announcement channel as the bot, then auto-publish it
+ *  so every server that Follows the channel receives it. allowed_mentions is
+ *  emptied so submitter-supplied text can never trigger an @everyone / @role ping.
+ *  Returns true if the message posted (publishing is best-effort). */
+function postDiscord_(botToken, channelId, ev) {
+  var lines = [];
+  if (ev.by) lines.push('by ' + ev.by);
+  var when = [ev.dateStr, ev.timeStr].filter(Boolean).join(' ');
+  if (when)    lines.push('🗓 ' + when);
+  if (ev.type) lines.push('🏷 ' + ev.type);
+  if (ev.note) lines.push(ev.note);
+  if (ev.link) lines.push(ev.link);
+  var content = ('**📢 New event: ' + ev.name + '**\n' + lines.join('\n')).slice(0, 1900);
+
+  var base = 'https://discord.com/api/v10/channels/' + channelId + '/messages';
+  var headers = {
+    Authorization: 'Bot ' + botToken,
+    'User-Agent': 'VRChatThaiSchedule (https://darkhager.github.io/Vrchat-Thai-World-Directory, 1.0)',
+  };
+
+  var res = UrlFetchApp.fetch(base, {
+    method: 'post', contentType: 'application/json', headers: headers,
+    payload: JSON.stringify({ content: content, allowed_mentions: { parse: [] } }),
+    muteHttpExceptions: true,
+  });
+  var code = res.getResponseCode();
+  if (code < 200 || code >= 300) {
+    Logger.log('Discord post failed (%s): %s', code, res.getContentText());
+    return false;
+  }
+
+  // Auto-publish (crosspost) to followers — needs only SEND_MESSAGES on our own
+  // message, and only works if this is an Announcement channel. Best-effort:
+  // if it fails the message is still in the channel, just not relayed.
+  var msgId = JSON.parse(res.getContentText()).id;
+  var cp = UrlFetchApp.fetch(base + '/' + msgId + '/crosspost', {
+    method: 'post', headers: headers, muteHttpExceptions: true,
+  });
+  var cc = cp.getResponseCode();
+  if (cc < 200 || cc >= 300) {
+    Logger.log('Discord publish failed (%s): %s — message posted but not relayed to followers', cc, cp.getContentText());
+  }
+  return true;
+}
+
+/** Create the calendar entry; returns its id (or null). Weekly → recurring series. */
+function createCalEvent_(ev, when, weekly) {
+  const cal = eventsCalendar_();
+  const title = ev.name + (ev.by ? ' — ' + ev.by : '');
+  const opts = { description: [ev.type && ('Type: ' + ev.type), ev.note, ev.link].filter(Boolean).join('\n') };
+  try {
+    if (weekly) {
+      const rec = CalendarApp.newRecurrence().addWeeklyRule();
+      return when.allDay
+        ? cal.createAllDayEventSeries(title, when.start, rec, opts).getId()
+        : cal.createEventSeries(title, when.start, when.end, rec, opts).getId();
+    }
+    return when.allDay
+      ? cal.createAllDayEvent(title, when.start, opts).getId()
+      : cal.createEvent(title, when.start, when.end, opts).getId();
+  } catch (e) {
+    Logger.log('Calendar create failed for "%s": %s', ev.name, e);
+    return null;
+  }
+}
+
+/** Build {start,end,allDay} from sheet cells — uses the real Date when the form
+ *  field is a Date/Time question, with a string fallback. Null if unparseable. */
+function combineDateTime_(dateVal, timeVal, dateStr, timeStr) {
+  var start = null;
+  if (dateVal instanceof Date && !isNaN(dateVal)) {
+    start = new Date(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate());
+  } else if (dateStr) {
+    var d = new Date(dateStr);
+    if (!isNaN(d)) start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  if (!start) return null;
+
+  var hasTime = false;
+  if (timeVal instanceof Date && !isNaN(timeVal)) {
+    start.setHours(timeVal.getHours(), timeVal.getMinutes(), 0, 0); hasTime = true;
+  } else if (timeStr) {
+    var m = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+    if (m) {
+      var h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+      if (m[3]) { if (/pm/i.test(m[3]) && h < 12) h += 12; if (/am/i.test(m[3]) && h === 12) h = 0; }
+      start.setHours(h, min, 0, 0); hasTime = true;
+    }
+  }
+  if (!hasTime) return { start: start, end: start, allDay: true };
+  return { start: start, end: new Date(start.getTime() + EVENT_HOURS * 3600 * 1000), allDay: false };
 }
 
 /** Run ONCE to publish schedule.json + approved_events.json every 15 minutes. */
