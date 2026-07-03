@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ตารางหนีเที่ยว Vrchat Thailand</title>
 <meta name="description" content="Weekly schedule of roleplay worlds, cafés and clubs open in Thailand on VRChat (GMT+7)." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -217,6 +218,8 @@
   .toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
     max-width:760px;margin:22px auto 6px}
   .toolbar.center{justify-content:center}
+  #schedbar .tb-spacer{flex:1}
+  #schedbar .tb-right{flex:1;display:flex;justify-content:flex-end}
   .toolbar[hidden]{display:none}
   .legend[hidden],.note[hidden]{display:none}
   .ef{display:flex;flex-direction:column;gap:2px;text-align:left}
@@ -296,31 +299,35 @@
 <div class="wrap">
   <header>
     <span class="eyebrow">VRChat · Thailand</span>
-    <h1>ตารางหนีเที่ยว Vrchat Thailand</h1>
-    <p class="subtitle">สร้างจาก Token Claude เหลือใช้</p>
+    <h1>ตารางหนีเที่ยว Vrchat</h1>
+    <p class="subtitle" id="subtitle">สร้างจาก Token Claude เหลือใช้</p>
     <div class="meta">
       <div class="tabs" id="pageTabs" role="tablist" aria-label="Choose page">
-        <button type="button" data-page="activity">📰 Activity</button>
         <button type="button" data-page="schedule">📅 Schedule</button>
+        <button type="button" data-page="activity">📰 Activity</button>
         <button type="button" data-page="guide">🐣 มือใหม่</button>
       </div>
-      <a class="btn" href="https://vrchat.com/home/group/grp_0d413f3b-45dc-48d8-837c-ec7bc1ea3d44" target="_blank" rel="noopener">＋ Join VRChat Group</a>
+      <a class="btn" id="joinBtn" href="https://vrchat.com/home/group/grp_0d413f3b-45dc-48d8-837c-ec7bc1ea3d44" target="_blank" rel="noopener">＋ Join VRChat Group</a>
       <button class="toggle" id="filterToggle" type="button" aria-label="Filter open venues">🟢 Open only</button>
       <button class="toggle" id="themeToggle" type="button" aria-label="Toggle dark / light mode">🌙 Dark</button>
+      <button class="toggle" id="langToggle" type="button" aria-label="Switch language / เปลี่ยนภาษา">🌐 ไทย</button>
     </div>
   </header>
 
   <div class="toolbar" id="actbar">
     <div class="ef">
-      <span class="ef-title">📣 Event Feeds</span>
-      <span class="ef-sub">มีงานอีเวนต์? ส่งให้เราลงตารางได้เลย · Got an event? Submit it here.</span>
+      <span class="ef-title" id="efTitle">📣 Event Feeds</span>
     </div>
-    <a class="btn" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 Submit an Event</a>
+    <a class="btn js-submit" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 ลงอีเว้นท์และร้าน</a>
   </div>
-  <div class="toolbar center" id="schedbar" hidden>
-    <div class="seg" id="layoutSeg" role="tablist" aria-label="Choose layout">
-      <button type="button" data-layout="table">▦ Table</button>
-      <button type="button" data-layout="timeline">📊 Timeline</button>
+  <div class="toolbar" id="schedbar" hidden>
+    <span class="tb-spacer"></span>
+    <a class="btn js-submit" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 ลงอีเว้นท์และร้าน</a>
+    <div class="tb-right">
+      <div class="seg" id="layoutSeg" role="tablist" aria-label="Choose layout">
+        <button type="button" data-layout="table">▦ Table</button>
+        <button type="button" data-layout="timeline">📊 Timeline</button>
+      </div>
     </div>
   </div>
 
@@ -337,13 +344,13 @@
   <main class="table" id="table"></main>
 
   <footer>
-    <div>Join the in-game group to get schedule news · สามารถ Join Group เพื่อรับข่าวใน VR</div>
-    <div style="margin-top:6px">Contact / edit: discord <b style="color:var(--ink)">ponyshy</b>, <b style="color:var(--ink)">01_ten</b>, <b style="color:var(--ink)">darkhager</b></div>
+    <div id="footGroup">Join the in-game group to get schedule news</div>
+    <div style="margin-top:6px"><span id="footContact">Contact / edit: discord</span> <b style="color:var(--ink)">ponyshy</b>, <b style="color:var(--ink)">01_ten</b>, <b style="color:var(--ink)">darkhager</b></div>
     <div style="margin-top:6px">
-      <a href="https://docs.google.com/spreadsheets/d/1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U/edit" target="_blank" rel="noopener">Original Google Sheet</a>
+      <a id="footSheet" href="https://docs.google.com/spreadsheets/d/1RyoXnE6UYlYZBDRS2OXDpRDZTQ1PxaJD0bSoXjIRm-U/edit" target="_blank" rel="noopener">Original Google Sheet</a>
     </div>
-    <div id="sync" data-state="off">⚙ Live sync off — add your API key to enable</div>
-    <div id="visits" hidden>👀 <b>—</b> visits · ผู้เข้าชม</div>
+    <div id="sync" data-state="off">⏳ Loading live schedule…</div>
+    <div id="visits" hidden>👀 <b>—</b> <span id="visitsLbl">visits</span></div>
   </footer>
 </div>
 
@@ -428,17 +435,67 @@ const SCHEDULE = [
 ];
 
 /* ── Render ── */
-const todayDow = (() => {
-  const utc = Date.now() + new Date().getTimezoneOffset() * 60000;
-  return new Date(utc + 7 * 3600000).getDay(); // now in GMT+7
-})();
+let todayDow = gmt7Base().getDay();   // recomputed in draw() so a long-open tab rolls over at midnight (GMT+7)
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 let currentData = SCHEDULE;
 let currentEvents = [];
 let openOnly = (localStorage.getItem('filter') || 'open') === 'open';
-let page = localStorage.getItem('page') || 'activity';     // 'activity' | 'schedule' | 'guide'
+let page = localStorage.getItem('page') || 'schedule';     // 'activity' | 'schedule' | 'guide'
 let layout = localStorage.getItem('layout') || 'table';    // 'table' | 'timeline' (Schedule page)
+let lang = localStorage.getItem('lang') || 'th';           // 'th' (default) | 'en'
+
+/* ── UI strings (Thai default / English). Venue names + notes come live from the
+   Google Sheet, so those stay in whatever language the sheet has. ── */
+const T = {
+  th: {
+    subtitle:'สร้างจาก Token Claude เหลือใช้',
+    tab_schedule:'📅 ตาราง', tab_activity:'📰 กิจกรรม', tab_guide:'🐣 มือใหม่',
+    join:'＋ เข้ากลุ่ม VRChat',
+    open_only:'🟢 เฉพาะที่เปิด', show_all:'👁 แสดงทั้งหมด',
+    dark:'🌙 มืด', light:'☀️ สว่าง', lang:'🌐 ไทย',
+    ef_title:'📣 มีอีเวนต์หรือร้าน? ส่งให้เราลงตารางได้เลย',
+    submit:'📅 ลงอีเว้นท์และร้าน',
+    seg_table:'▦ ตาราง', seg_timeline:'📊 ไทม์ไลน์',
+    lg_open:'เข้าได้เลย', lg_reserve:'ต้องจองก่อน', lg_renovate:'ปิดปรับปรุง', lg_closed:'ปิดสัปดาห์นี้',
+    venuenote:'📌 กดที่ชื่อร้านเพื่อเปิด Discord ของร้าน · รายละเอียดเฉพาะของแต่ละร้านดูได้จากหมายเหตุ',
+    today:'วันนี้', tomorrow:'พรุ่งนี้',
+    more_events:'📅 อีเวนต์เพิ่มเติม', upcoming:'เร็ว ๆ นี้', special:'🗓 พิเศษ / ตามรอบ',
+    tag_event:'อีเวนต์', by:'โดย',
+    empty_feed:'ไม่มีร้านเปิด', empty_timeline:'ไม่มีร้านเปิด',
+    foot_group:'Join กลุ่มในเกมเพื่อรับข่าวตารางร้าน',
+    foot_contact:'ติดต่อ / แก้ไข: discord', foot_sheet:'Google Sheet ต้นฉบับ', visits:'ผู้เข้าชม',
+    sync_loading:'⏳ กำลังโหลดตารางล่าสุด…', sync_syncing:'⟳ กำลังซิงค์…',
+    sync_live:'● อัปเดตล่าสุด', sync_live_sheet:'● ซิงค์จาก Google Sheet เมื่อ',
+    sync_err:'⚠ ซิงค์ไม่สำเร็จ — แสดงข้อมูลที่บันทึกไว้',
+    WD:['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'],
+    MON:['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],
+  },
+  en: {
+    subtitle:'Built with leftover Claude tokens',
+    tab_schedule:'📅 Schedule', tab_activity:'📰 Activity', tab_guide:'🐣 New here',
+    join:'＋ Join VRChat Group',
+    open_only:'🟢 Open only', show_all:'👁 Show all',
+    dark:'🌙 Dark', light:'☀️ Light', lang:'🌐 Eng',
+    ef_title:'📣 Got an event or venue? Submit it here.',
+    submit:'📅 Submit event or venue',
+    seg_table:'▦ Table', seg_timeline:'📊 Timeline',
+    lg_open:'Free entry', lg_reserve:'Reserve', lg_renovate:'Renovating', lg_closed:'Closed this week',
+    venuenote:"📌 Tap a venue's name to open its Discord — venue-specific details are in each venue's note.",
+    today:'Today', tomorrow:'Tomorrow',
+    more_events:'📅 More events', upcoming:'upcoming', special:'🗓 Special / pattern',
+    tag_event:'Event', by:'by',
+    empty_feed:'No open venues', empty_timeline:'No scheduled openings',
+    foot_group:'Join the in-game group to get schedule news',
+    foot_contact:'Contact / edit: discord', foot_sheet:'Original Google Sheet', visits:'visits',
+    sync_loading:'⏳ Loading live schedule…', sync_syncing:'⟳ Syncing…',
+    sync_live:'● Live · updated', sync_live_sheet:'● Live · synced from the Google Sheet at',
+    sync_err:'⚠ Could not sync — showing saved copy',
+    WD:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+    MON:['January','February','March','April','May','June','July','August','September','October','November','December'],
+  }
+};
+const tr = k => (T[lang][k] ?? T.en[k] ?? k);
 
 /* Layout 1 — Table (default) */
 function tableHTML(schedule){
@@ -454,9 +511,8 @@ function tableHTML(schedule){
     }).join('');
     return `<div class="day-row d-${day.key}${isToday?' today':''}">
       <div class="day-label">
-        <span class="day-en">${esc(day.en)}</span>
-        <span class="day-th">${esc(day.th)}</span>
-        ${isToday?'<span class="today-tag">Today</span>':''}
+        <span class="day-en">${esc(lang==='th'?day.th:day.en)}</span>
+        ${isToday?`<span class="today-tag">${esc(tr('today'))}</span>`:''}
       </div>
       <div class="venues">${venues}</div>
     </div>`;
@@ -510,14 +566,14 @@ function timelineHTML(schedule){
   }
   const days = schedule.map(day => {
     const isToday = day.dow !== undefined && day.dow === todayDow;
-    const head = `<div class="tg-dayhead d-${day.key}${isToday?' today':''}">${esc(day.en)}`
-               + ` <span class="th">${esc(day.th)}</span>${isToday?'<span class="tg-today">Today</span>':''}</div>`;
+    const head = `<div class="tg-dayhead d-${day.key}${isToday?' today':''}">${esc(lang==='th'?day.th:day.en)}`
+               + `${isToday?`<span class="tg-today">${esc(tr('today'))}</span>`:''}</div>`;
     const timed = [], flex = [];
     day.venues.forEach(v => { const r = parseRange(v.time); (r ? timed : flex).push({ v, r }); });
     timed.sort((a,b) => a.r.s - b.r.s);
     const lanes = [...timed, ...flex];
     if(!lanes.length){
-      return head + `<div class="tg-day" style="height:46px"><div class="tg-empty">No Scheduled Openings · ไม่มีร้านเปิด</div></div>`;
+      return head + `<div class="tg-day" style="height:46px"><div class="tg-empty">${esc(tr('empty_timeline'))}</div></div>`;
     }
     let top = 0;
     const blocks = lanes.map(({ v, r }) => {
@@ -545,8 +601,6 @@ function timelineHTML(schedule){
 }
 
 /* Layout 3 — Activity feed (today-first, date-grouped: open shops + events) */
-const WD = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function gmt7Base(){                                   // a Date whose local fields read as GMT+7
   const utc = Date.now() + new Date().getTimezoneOffset() * 60000;
   return new Date(utc + 7 * 3600000);
@@ -568,8 +622,8 @@ function venueItemHTML(v, day){
 function eventItemHTML(ev){
   const inner = `<div class="fi-main"><div class="fi-top">`
     + (ev.time ? `<span class="fi-time">${esc(ev.time)}</span>` : '')
-    + `<span class="fi-name">${esc(ev.name||'Event')}</span><span class="fi-tag">Event</span></div>`
-    + (ev.by ? `<span class="fi-by">by ${esc(ev.by)}</span>` : '')
+    + `<span class="fi-name">${esc(ev.name||tr('tag_event'))}</span><span class="fi-tag">${esc(tr('tag_event'))}</span></div>`
+    + (ev.by ? `<span class="fi-by">${esc(tr('by'))} ${esc(ev.by)}</span>` : '')
     + (ev.note ? `<span class="fi-note">📝 ${esc(ev.note)}</span>` : '') + `</div>`;
   const dot = `<i class="dot" style="background:#b9a3ff"></i>`;
   return ev.link
@@ -587,27 +641,29 @@ function activityHTML(schedule, events){
   for(let i = 0; i < 7; i++){
     const dt = new Date(base.getTime() + i * 86400000);
     const dow = dt.getDay(), dkey = dt.toDateString();
-    const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : WD[dow];
-    const sub = `${dt.getDate()} ${MON[dt.getMonth()]} ${dt.getFullYear()}`;
+    const label = i === 0 ? tr('today') : i === 1 ? tr('tomorrow') : T[lang].WD[dow];
+    const sub = `${dt.getDate()} ${T[lang].MON[dt.getMonth()]} ${dt.getFullYear()}`;
     const venues = byDow[dow] ? byDow[dow].venues : [];
     const dayEv = evList.filter((ev, idx) => { if(eventDateKey(ev) === dkey){ used.add(idx); return true; } return false; });
     let items = dayEv.map(eventItemHTML).join('') + venues.map(v => venueItemHTML(v, byDow[dow])).join('');
-    if(!items) items = `<div class="feed-empty">No open venues · ไม่มีร้านเปิด</div>`;
+    if(!items) items = `<div class="feed-empty">${esc(tr('empty_feed'))}</div>`;
     html += `<div class="feed-group"><div class="feed-date">${label}<span>${esc(sub)}</span></div>${items}</div>`;
   }
   const extra = evList.filter((ev, idx) => !used.has(idx));
   if(extra.length)
-    html += `<div class="feed-group"><div class="feed-date">📅 More events<span>upcoming</span></div>${extra.map(eventItemHTML).join('')}</div>`;
+    html += `<div class="feed-group"><div class="feed-date">${tr('more_events')}<span>${tr('upcoming')}</span></div>${extra.map(eventItemHTML).join('')}</div>`;
   if(spc && spc.venues.length)
-    html += `<div class="feed-group"><div class="feed-date">🗓 Special / pattern<span>${esc(spc.th || '')}</span></div>${spc.venues.map(v => venueItemHTML(v, spc)).join('')}</div>`;
+    html += `<div class="feed-group"><div class="feed-date">${tr('special')}<span>${esc((lang==='th'?spc.th:spc.en) || '')}</span></div>${spc.venues.map(v => venueItemHTML(v, spc)).join('')}</div>`;
   return html + '</div>';
 }
 
-/* Guide page — คู่มือมือใหม่ (static, Thai-first; links reuse the site's real URLs) */
-function guideHTML(){
+/* Guide page — คู่มือมือใหม่ (Thai + English). Links reuse the site's real URLs;
+   the English copy is a first-pass translation of the Thai — refine as needed. */
+function guideHTML(){ return lang === 'th' ? guideTH() : guideEN(); }
+function guideTH(){
   return `<section class="guide">
     <h2>🐣 คู่มือมือใหม่</h2>
-    <p class="lead">รวมทุกเรื่องที่ควรรู้สำหรับมือใหม่ — แตะที่หัวข้อเพื่อเปิดดูรายละเอียดได้เลยนะ · Tap a heading to pop it open</p>
+    <p class="lead">รวมทุกเรื่องที่ควรรู้สำหรับมือใหม่ — แตะที่หัวข้อเพื่อเปิดดูรายละเอียดได้เลยนะ</p>
 
     <details class="gsec" name="gsec" open>
       <summary>🎮 เริ่มต้นใช้งาน VRChat</summary>
@@ -681,7 +737,7 @@ function guideHTML(){
         <li>เปิดร้านเวลาไหนก็ได้ตามสะดวก ไม่ต้องกังวลว่าจะไปทับเวลาคนอื่น เพราะลูกค้าจะเลือกเที่ยวเองนะ</li>
         <li>เปิดได้ตามศรัทธาเลย ทางเรายินดีลงตารางให้ฟรีนะ
           <div class="btnrow">
-            <a class="gbtn" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 Submit an Event ↗</a>
+            <a class="gbtn" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 ลงอีเว้นท์และร้าน ↗</a>
           </div>
         </li>
         <li>การเป็น Partner โปรดพิจารณาให้รอบคอบ เพราะใน VRChat ก็มีผู้คนที่ไม่ถูกกันอยู่บ้าง แนะนำให้ศึกษาสภาพแวดล้อมก่อนตัดสินใจ แต่ถ้าเปิดเอาสนุกก็ไม่ต้องกังวลนะ ขอให้สนุกกับการเล่นเกมกับเพื่อน ๆ!</li>
@@ -689,6 +745,93 @@ function guideHTML(){
     </details>
 
     <p class="contact">🙋 หากมีข้อสงสัย สอบถามเพิ่มเติมได้ที่ Discord: <b>darkhager</b> ได้เลยนะ</p>
+  </section>`;
+}
+function guideEN(){
+  return `<section class="guide">
+    <h2>🐣 Newbie guide</h2>
+    <p class="lead">Everything a newcomer should know — tap a heading to pop it open.</p>
+
+    <details class="gsec" name="gsec" open>
+      <summary>🎮 Getting started with VRChat</summary>
+      <ol>
+        <li>Install VRChat (free) — play on PC via Steam or on Meta Quest. No VR headset? You can still play on your computer.
+          <div class="btnrow">
+            <a class="gbtn" href="https://vrchat.com/home/download" target="_blank" rel="noopener">📥 Download VRChat ↗</a>
+          </div>
+        </li>
+        <li>Sign up and pick an avatar you like.</li>
+        <li>Link your Steam account to your VRChat account.</li>
+      </ol>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>🛡️ Trust Rank & how to level up</summary>
+      <p class="sub" style="margin-top:6px">Trust Rank is your account's credibility level in VRChat, shown by your nameplate color. Higher ranks unlock more permissions (like uploading avatars or worlds). From lowest to highest:</p>
+      <ol>
+        <li><span class="tr" style="--c:#b0b0b0"></span>Visitor <span class="sub" style="display:inline">— brand-new players</span></li>
+        <li><span class="tr" style="--c:#1f92ff"></span>New User</li>
+        <li><span class="tr" style="--c:#2bcf5c"></span>User</li>
+        <li><span class="tr" style="--c:#ff7b42"></span>Known User</li>
+        <li><span class="tr" style="--c:#b18cff"></span>Trusted User <span class="sub" style="display:inline">— the highest everyday-player rank</span></li>
+      </ol>
+      <p class="gsub">How to raise your Trust Rank</p>
+      <ol>
+        <li>Play regularly — the more consistently you play, the more your Trust gradually rises.</li>
+        <li>Add friends and talk to people — socializing builds credibility.</li>
+        <li>Try creating and uploading content like worlds or avatars (you must be New User or above to upload).</li>
+        <li>Behave well and mind your manners — avoid being blocked or reported (heavy penalties can drop you to the negative "Nuisance" rank).</li>
+        <li>Older accounts also help your Trust.</li>
+      </ol>
+      <p class="sub">Note: VRChat doesn't publish the exact Trust formula, so this is a general guideline. Also, Trust Rank (nameplate color) is different from the green Avatar Quality mentioned below.</p>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>🚪 How to enter a venue</summary>
+      <ol>
+        <li>Join the Discord of the venue you're interested in first.</li>
+        <li>Please read the venue's rules carefully.</li>
+        <li>Add the venue's owner or host as a friend, or join their group to get in.
+          <div class="btnrow">
+            <a class="gbtn sec" href="https://vrchat.com/home/user/usr_4e80f205-e770-49ed-8655-824478be48f0" target="_blank" rel="noopener">👤 Example: user link ↗</a>
+            <a class="gbtn sec" href="https://vrc.group/TRNEWS.5867" target="_blank" rel="noopener">👥 Example: group link ↗</a>
+          </div>
+        </li>
+        <li>Join on the days and times shown in the schedule or the venue's announcements.</li>
+      </ol>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>✨ Tips for visiting venues</summary>
+      <ol>
+        <li>Be kind and friendly to everyone, keep your mic volume reasonable, mind your manners, and keep your avatar a sensible size. It's a game, but the people in it are real.</li>
+        <li>We recommend an avatar with green (Excellent) Quality — it's welcome at every venue.
+          <img class="gimg" src="img/avatar-quality-green.png" alt="Example of a green (Excellent) Quality avatar" loading="lazy"></li>
+        <li>If your PC isn't powerful, turn on Safety (Custom) and show only your friends' avatars, or only as many as you need.
+          <img class="gimg wide" src="img/safety-custom.png" alt="VRChat Safety Shield Levels settings" loading="lazy"></li>
+        <li>Breaking the rules and getting blacklisted can get you banned from several venues at once.</li>
+        <li>Remember that the law applies in-game too.</li>
+      </ol>
+    </details>
+
+    <details class="gsec" name="gsec">
+      <summary>🏠 Tips for hosting a venue</summary>
+      <ol>
+        <li>Start by deciding on a theme or concept for your venue.</li>
+        <li>Prepare a world for it — build it yourself or commission someone.
+          <span class="sub">Please weigh a contractor's past work and reliability carefully.</span></li>
+        <li>Invite friends to join your team and help run it.</li>
+        <li>Open at whatever time suits you — don't worry about overlapping with others, since guests choose where to go themselves.</li>
+        <li>Open as often as you like — we're happy to list you on the schedule for free.
+          <div class="btnrow">
+            <a class="gbtn" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 Submit event or venue ↗</a>
+          </div>
+        </li>
+        <li>Consider partnerships carefully — VRChat has its share of people who don't get along, so scope out the scene before you decide. But if you're opening just for fun, don't worry — enjoy playing with your friends!</li>
+      </ol>
+    </details>
+
+    <p class="contact">🙋 Questions? Feel free to ask on Discord: <b>darkhager</b></p>
   </section>`;
 }
 
@@ -699,6 +842,7 @@ function visibleData(){
     : currentData;
 }
 function draw(){
+  todayDow = gmt7Base().getDay();   // keep "Today" fresh on a long-open tab (rolls over midnight GMT+7)
   const data = visibleData();
   const el = document.getElementById('table');
   if(page === 'guide'){
@@ -718,7 +862,7 @@ render(SCHEDULE);   // instant paint from the saved copy; live sync runs below
 
 /* ── Toggles (theme + layout; both remembered — dark & table are the defaults) ── */
 const themeBtn = document.getElementById('themeToggle');
-function paintTheme(){ themeBtn.textContent = document.documentElement.dataset.theme === 'light' ? '☀️ Light' : '🌙 Dark'; }
+function paintTheme(){ themeBtn.textContent = document.documentElement.dataset.theme === 'light' ? tr('light') : tr('dark'); }
 themeBtn.addEventListener('click', () => {
   const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
   document.documentElement.dataset.theme = next; localStorage.setItem('theme', next); paintTheme();
@@ -747,11 +891,47 @@ layoutSeg.addEventListener('click', e => {
 paintPage();
 
 const filterBtn = document.getElementById('filterToggle');
-function paintFilter(){ filterBtn.textContent = openOnly ? '🟢 Open only' : '👁 Show all'; }
+function paintFilter(){ filterBtn.textContent = openOnly ? tr('open_only') : tr('show_all'); }
 filterBtn.addEventListener('click', () => {
   openOnly = !openOnly; localStorage.setItem('filter', openOnly ? 'open' : 'all'); paintFilter(); draw();
 });
 paintFilter();
+
+/* ── Language (Thai default / English). Repaints all static chrome + re-renders. ── */
+const langBtn = document.getElementById('langToggle');
+function paintLang(){ langBtn.textContent = tr('lang'); }
+function setText(sel, txt){ const el = document.querySelector(sel); if(el) el.textContent = txt; }
+function applyLang(){
+  document.documentElement.lang = lang;
+  setText('#subtitle', tr('subtitle'));
+  pageTabs.querySelector('[data-page="schedule"]').textContent = tr('tab_schedule');
+  pageTabs.querySelector('[data-page="activity"]').textContent = tr('tab_activity');
+  pageTabs.querySelector('[data-page="guide"]').textContent = tr('tab_guide');
+  setText('#joinBtn', tr('join'));
+  setText('#efTitle', tr('ef_title'));
+  layoutSeg.querySelector('[data-layout="table"]').textContent = tr('seg_table');
+  layoutSeg.querySelector('[data-layout="timeline"]').textContent = tr('seg_timeline');
+  document.querySelectorAll('.js-submit').forEach(b => b.textContent = tr('submit'));
+  document.getElementById('legend').innerHTML =
+      `<span><i class="dot open"></i> ${esc(tr('lg_open'))}</span>`
+    + `<span><i class="dot reserve"></i> ${esc(tr('lg_reserve'))}</span>`
+    + `<span><i class="dot renovate"></i> ${esc(tr('lg_renovate'))}</span>`
+    + `<span><i class="dot closed"></i> ${esc(tr('lg_closed'))}</span>`;
+  document.getElementById('venuenote').textContent = tr('venuenote');
+  setText('#footGroup', tr('foot_group'));
+  setText('#footContact', tr('foot_contact'));
+  setText('#footSheet', tr('foot_sheet'));
+  setText('#visitsLbl', tr('visits'));
+  const sync = document.getElementById('sync');
+  if(sync && sync.dataset.state === 'off') sync.textContent = tr('sync_loading');
+  paintTheme(); paintFilter(); paintLang();
+  document.getElementById('table').innerHTML = '';   // force a re-render in the new language (re-inits the guide accordion too)
+  draw();
+}
+langBtn.addEventListener('click', () => {
+  lang = lang === 'th' ? 'en' : 'th'; localStorage.setItem('lang', lang); applyLang();
+});
+applyLang();
 
 /* ── Live sync from Google Sheets (values + colors + Discord links) ── */
 function setSync(state, text){
@@ -766,7 +946,7 @@ async function loadDays(url, opts){
   return { days, res };
 }
 async function fetchLive(){
-  setSync('sync','⟳ Syncing…');
+  setSync('sync', tr('sync_syncing'));
   // 1) static schedule.json published to the repo (no backend on the hot path)
   if(CONFIG.jsonUrl){
     try{
@@ -775,7 +955,7 @@ async function fetchLive(){
       const lm = res.headers.get('last-modified');
       const t = lm ? new Date(lm).toLocaleString([], { dateStyle:'medium', timeStyle:'short' })
                    : new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-      setSync('live','● Live · updated ' + t);
+      setSync('live', tr('sync_live') + ' ' + t);
       return;
     }catch(err){ /* fall through to the live endpoint */ }
   }
@@ -785,11 +965,11 @@ async function fetchLive(){
       const { days } = await loadDays(CONFIG.scriptUrl);
       render(days);
       const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-      setSync('live','● Live · synced from the Google Sheet at ' + t);
+      setSync('live', tr('sync_live_sheet') + ' ' + t);
       return;
-    }catch(err){ setSync('err','⚠ Could not sync (' + err.message + ') — showing saved copy'); return; }
+    }catch(err){ setSync('err', tr('sync_err')); return; }
   }
-  setSync('err','⚠ Could not sync — showing saved copy');
+  setSync('err', tr('sync_err'));
 }
 async function fetchEvents(){
   if(!CONFIG.eventsUrl) return;
