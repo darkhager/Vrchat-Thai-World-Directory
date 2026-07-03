@@ -294,11 +294,11 @@
           "note": "อาจจะเปิดวันไหนก็ได้"
         },
         {
-          "time": "??–??",
+          "time": "23:??",
           "name": "Bar 13 after midnight",
           "status": "open",
-          "discord": "",
-          "note": ""
+          "discord": "https://discord.gg/RwQFmBGKju",
+          "note": "เปิดเกือบๆทุกวัน อาจจะเปิด 23:00 หรือ 23:30"
         }
       ]
     }
