@@ -185,6 +185,17 @@
   .tg-block.closed{background:var(--st-closed);border-color:var(--st-closed-bd)}
   .tg-block.flex{border-style:dashed}
 
+  /* ── "Open right now" live glow (venue currently within its hours today) ── */
+  @keyframes liveGlow{
+    0%,100%{box-shadow:0 0 0 1.5px var(--st-open-bd),0 0 8px 1px rgba(74,222,140,.5)}
+    50%    {box-shadow:0 0 0 1.5px rgba(74,222,140,.95),0 0 20px 5px rgba(74,222,140,.85)}
+  }
+  .venue.live,.feed-item.live,.tg-block.live{animation:liveGlow 1.8s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){
+    .venue.live,.feed-item.live,.tg-block.live{
+      animation:none;box-shadow:0 0 0 1.5px rgba(74,222,140,.9),0 0 16px 3px rgba(74,222,140,.7)}
+  }
+
   @media (max-width:660px){
     .day-row{flex-direction:column}
     .day-label{flex:none;flex-direction:row;align-items:center;gap:8px;border-right:none;
@@ -227,7 +238,7 @@
   .feed{max-width:680px;margin:0 auto}
   .feed-group{margin-bottom:16px}
   .feed-date{position:sticky;top:0;z-index:2;backdrop-filter:blur(6px);background:var(--feedhead);
-    padding:9px 6px;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--ink);text-transform:uppercase}
+    padding:9px 6px;margin-bottom:12px;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--ink);text-transform:uppercase}
   .feed-date span{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px}
   .feed-item{display:flex;align-items:flex-start;gap:11px;
     background:var(--panel);border:1px solid var(--line);border-radius:13px;
