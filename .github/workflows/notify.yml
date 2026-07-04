@@ -1,0 +1,35 @@
+name: Discord open alerts
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 min (UTC); the script computes GMT+7 itself
+  workflow_dispatch:
+    inputs:
+      test:
+        description: 'Send a one-off test alert now'
+        type: boolean
+        default: false
+
+# Keep WINDOW_MIN equal to the cron interval above (10).
+permissions:
+  contents: read
+
+concurrency:
+  group: discord-open-alerts
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Send alerts
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          THRESHOLD_MIN: '30'
+          WINDOW_MIN: '10'
+          TEST_SEND: ${{ inputs.test && '1' || '' }}
+        run: node notify/notify.mjs
