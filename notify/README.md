@@ -1,6 +1,6 @@
 # Discord open alerts
 
-A scheduled GitHub Action posts a Discord message ~30 minutes before a venue opens.
+A scheduled GitHub Action posts a Discord message when a venue opens.
 No server or bot token — just a Discord **webhook** and the public `schedule.json`.
 
 ## How it works
@@ -22,13 +22,13 @@ No server or bot token — just a Discord **webhook** and the public `schedule.j
 3. **Test it:** repo → Actions → *Discord open alerts* → Run workflow → tick **test** → Run.
    A 🧪 sample alert should appear in the channel within a minute.
 
-That's it. Real alerts then fire automatically ~30 min before each open.
+That's it. Real alerts then fire automatically as each venue opens.
 
 ## Tuning
 
 Edit `.github/workflows/notify.yml`:
 
-- `THRESHOLD_MIN` — minutes before open to alert (default `30`).
+- `THRESHOLD_MIN` — minutes before open to alert; `0` = at open time (default `0`).
 - Cron interval + `WINDOW_MIN` — keep these equal (both `10` by default).
 
 ## More than one Discord

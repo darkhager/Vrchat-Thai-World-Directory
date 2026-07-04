@@ -3,7 +3,7 @@
 //
 // Config (env):
 //   DISCORD_WEBHOOK_URL  the Discord webhook to post to (required unless DRY_RUN)
-//   THRESHOLD_MIN        alert this many minutes before a venue opens   (default 30)
+//   THRESHOLD_MIN        minutes before open to alert; 0 = at open time  (default 0)
 //   WINDOW_MIN           run cadence in minutes; keep equal to the cron  (default 10)
 //   SCHEDULE_URL         override the schedule.json source
 //   DRY_RUN=1            print the payload instead of POSTing
@@ -13,7 +13,7 @@
 const SCHEDULE_URL = process.env.SCHEDULE_URL
   || 'https://darkhager.github.io/Vrchat-Thai-World-Directory/schedule.json';
 const WEBHOOK = (process.env.DISCORD_WEBHOOK_URL || '').replace(/^﻿/, '').trim();
-const THRESHOLD_MIN = Number(process.env.THRESHOLD_MIN || 30);
+const THRESHOLD_MIN = Number(process.env.THRESHOLD_MIN ?? 0);
 const WINDOW_MIN = Number(process.env.WINDOW_MIN || 10); // should match the cron interval
 const DRY_RUN = /^(1|true|yes)$/i.test(process.env.DRY_RUN || '');
 const TEST_SEND = /^(1|true|yes)$/i.test(process.env.TEST_SEND || '');
@@ -61,7 +61,8 @@ async function main() {
 
   if (!today) { console.log(`No schedule entry for dow=${dow}; nothing to do.`); return; }
 
-  // Stateless de-dup: a venue's minutes-until-open passes through this window once per day.
+  // Stateless de-dup: each venue crosses this window (THRESHOLD-WINDOW, THRESHOLD] once per day.
+  // With THRESHOLD=0 the window is (-WINDOW, 0] — i.e. the first run at/after a venue opens.
   const lo = THRESHOLD_MIN - WINDOW_MIN; // exclusive
   const hi = THRESHOLD_MIN;              // inclusive
   const hits = [];
@@ -82,15 +83,19 @@ async function main() {
 }
 
 async function send(hits, isTest) {
+  const atOpen = THRESHOLD_MIN <= 0;
   const fields = hits.map(({ v, mins }) => ({
     name: `🟢 ${v.name}`,
-    value: `เปิด ${startText(v.time)} (อีก ~${mins} นาที / opens in ~${mins} min)`
+    value: (atOpen
+      ? `เปิดแล้ว ${startText(v.time)} / open now`
+      : `เปิด ${startText(v.time)} (อีก ~${mins} นาที / opens in ~${mins} min)`)
       + (v.discord ? `\n[Discord](${v.discord})` : ''),
   }));
   const payload = {
     username: 'ตารางหนีเที่ยว Vrchat',
     embeds: [{
-      title: (isTest ? '🧪 ' : '🔔 ') + 'เปิดเร็ว ๆ นี้ / Opening soon',
+      title: (isTest ? '🧪 ' : (atOpen ? '🟢 ' : '🔔 '))
+        + (atOpen ? 'เปิดแล้ว / Now open' : 'เปิดเร็ว ๆ นี้ / Opening soon'),
       color: 0x2ecc71,
       fields,
       footer: { text: 'darkhager.github.io/Vrchat-Thai-World-Directory' + (isTest ? ' · test' : '') },

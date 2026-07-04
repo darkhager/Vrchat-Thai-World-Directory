@@ -29,7 +29,7 @@ jobs:
       - name: Send alerts
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          THRESHOLD_MIN: '30'
+          THRESHOLD_MIN: '0'
           WINDOW_MIN: '10'
           TEST_SEND: ${{ inputs.test && '1' || '' }}
         run: node notify/notify.mjs
