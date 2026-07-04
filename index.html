@@ -185,17 +185,6 @@
   .tg-block.closed{background:var(--st-closed);border-color:var(--st-closed-bd)}
   .tg-block.flex{border-style:dashed}
 
-  /* ── "Open right now" live glow (venue currently within its hours today) ── */
-  @keyframes liveGlow{
-    0%,100%{box-shadow:0 0 0 1.5px var(--st-open-bd),0 0 8px 1px rgba(74,222,140,.5)}
-    50%    {box-shadow:0 0 0 1.5px rgba(74,222,140,.95),0 0 20px 5px rgba(74,222,140,.85)}
-  }
-  .venue.live,.feed-item.live,.tg-block.live{animation:liveGlow 1.8s ease-in-out infinite}
-  @media (prefers-reduced-motion:reduce){
-    .venue.live,.feed-item.live,.tg-block.live{
-      animation:none;box-shadow:0 0 0 1.5px rgba(74,222,140,.9),0 0 16px 3px rgba(74,222,140,.7)}
-  }
-
   @media (max-width:660px){
     .day-row{flex-direction:column}
     .day-label{flex:none;flex-direction:row;align-items:center;gap:8px;border-right:none;
@@ -218,12 +207,12 @@
   .toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
     max-width:760px;margin:22px auto 6px}
   .toolbar.center{justify-content:center}
-  #schedbar .tb-spacer{flex:1}
-  #schedbar .tb-right{flex:1;display:flex;justify-content:flex-end}
+  .toolbar .ef{flex:1}
+  .toolbar .tb-right{flex:1;display:flex;justify-content:flex-end}
   .toolbar[hidden]{display:none}
   .legend[hidden],.note[hidden]{display:none}
   .ef{display:flex;flex-direction:column;gap:2px;text-align:left}
-  .ef-title{font-size:16.5px;font-weight:700;color:var(--ink)}
+  .ef-title{font-size:15px;font-weight:700;color:var(--ink)}
   .ef-sub{font-size:12.5px;color:var(--muted);font-weight:300}
 
   /* ── Segmented selector (Schedule layout) + filter ── */
@@ -319,9 +308,12 @@
       <span class="ef-title" id="efTitle">📣 Event Feeds</span>
     </div>
     <a class="btn js-submit" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 ลงอีเว้นท์และร้าน</a>
+    <div class="tb-right"></div>
   </div>
   <div class="toolbar" id="schedbar" hidden>
-    <span class="tb-spacer"></span>
+    <div class="ef">
+      <span class="ef-title">📣 Event Feeds</span>
+    </div>
     <a class="btn js-submit" href="https://forms.gle/N1yYtXsj8WHYGd1B6" target="_blank" rel="noopener">📅 ลงอีเว้นท์และร้าน</a>
     <div class="tb-right">
       <div class="seg" id="layoutSeg" role="tablist" aria-label="Choose layout">
@@ -908,7 +900,7 @@ function applyLang(){
   pageTabs.querySelector('[data-page="activity"]').textContent = tr('tab_activity');
   pageTabs.querySelector('[data-page="guide"]').textContent = tr('tab_guide');
   setText('#joinBtn', tr('join'));
-  setText('#efTitle', tr('ef_title'));
+  document.querySelectorAll('.ef-title').forEach(e => e.textContent = tr('ef_title'));
   layoutSeg.querySelector('[data-layout="table"]').textContent = tr('seg_table');
   layoutSeg.querySelector('[data-layout="timeline"]').textContent = tr('seg_timeline');
   document.querySelectorAll('.js-submit').forEach(b => b.textContent = tr('submit'));
