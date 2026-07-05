@@ -950,29 +950,30 @@ async function loadDays(url, opts){
 }
 async function fetchLive(){
   setSync('sync', tr('sync_syncing'));
-  // 1) static schedule.json published to the repo (no backend on the hot path)
+  let shownJson = null;
+  // 1) instant paint from the static file (fast CDN) so the page is never blank
   if(CONFIG.jsonUrl){
     try{
       const { days, res } = await loadDays(CONFIG.jsonUrl + '?t=' + Date.now(), { cache:'no-store' });
-      render(days);
+      render(days); shownJson = JSON.stringify(days);
       const lm = res.headers.get('last-modified');
       const t = lm ? new Date(lm).toLocaleString([], { dateStyle:'medium', timeStyle:'short' })
                    : new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
       setSync('live', tr('sync_live') + ' ' + t);
-      return;
-    }catch(err){ /* fall through to the live endpoint */ }
+    }catch(err){ /* no static file yet — the live endpoint below fills in */ }
   }
-  // 2) fallback: live Apps Script endpoint
+  // 2) live from the sheet — Apps Script reads it on every load, so a reload always
+  //    reflects the latest Google Sheet edits. Overrides the static paint if reachable.
   if(CONFIG.scriptUrl){
     try{
-      const { days } = await loadDays(CONFIG.scriptUrl);
-      render(days);
+      const { days } = await loadDays(CONFIG.scriptUrl + '?t=' + Date.now());
+      if(JSON.stringify(days) !== shownJson) render(days);   // repaint only if it changed
       const t = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
       setSync('live', tr('sync_live_sheet') + ' ' + t);
       return;
-    }catch(err){ setSync('err', tr('sync_err')); return; }
+    }catch(err){ if(shownJson !== null) return;   /* keep the static paint */ }
   }
-  setSync('err', tr('sync_err'));
+  if(shownJson === null) setSync('err', tr('sync_err'));
 }
 async function fetchEvents(){
   if(!CONFIG.eventsUrl) return;
