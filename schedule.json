@@ -57,6 +57,13 @@
           "note": ""
         },
         {
+          "time": "20:00–22:00",
+          "name": "MitsuHana",
+          "status": "open",
+          "discord": "https://discord.gg/Z3wxBeMQc4",
+          "note": ""
+        },
+        {
           "time": "21:00–23:00",
           "name": "Helheim",
           "status": "open",
@@ -112,6 +119,13 @@
           "name": "WANTED",
           "status": "open",
           "discord": "https://discord.gg/Kae5tgZN4n",
+          "note": ""
+        },
+        {
+          "time": "22:00–00:00",
+          "name": "Aiko Fantasia",
+          "status": "open",
+          "discord": "https://discord.com/invite/9HkjWDqUgG",
           "note": ""
         }
       ]
@@ -271,13 +285,6 @@
           "status": "open",
           "discord": "https://discord.gg/ftK2XfnPx6",
           "note": "สุ่มเปิด"
-        },
-        {
-          "time": "20:00–22:30",
-          "name": "MitsuHana",
-          "status": "open",
-          "discord": "https://discord.gg/Z3wxBeMQc4",
-          "note": "เปิดทุกวันที่ 10, 20 ของทุกเดือน"
         },
         {
           "time": "20:00–23:00",
