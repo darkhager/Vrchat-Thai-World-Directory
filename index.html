@@ -972,7 +972,7 @@ async function fetchLive(){
   // 1) instant paint from the static file (fast CDN) so the page is never blank
   if(CONFIG.jsonUrl){
     try{
-      const { days, res } = await loadDays(CONFIG.jsonUrl + '?t=' + Date.now(), { cache:'no-store' });
+      const { days, res } = await loadDays(CONFIG.jsonUrl);   // HTTP-cached (GitHub sends max-age 600 + ETag); the live /exec below is what keeps it fresh
       render(days); shownJson = JSON.stringify(days);
       const lm = res.headers.get('last-modified');
       const t = lm ? new Date(lm).toLocaleString([], { dateStyle:'medium', timeStyle:'short' })
@@ -996,7 +996,7 @@ async function fetchLive(){
 async function fetchEvents(){
   if(!CONFIG.eventsUrl) return;
   try{
-    const res = await fetch(CONFIG.eventsUrl + '?t=' + Date.now(), { cache:'no-store' });
+    const res = await fetch(CONFIG.eventsUrl);   // HTTP-cached; events change rarely, ~600s staleness is fine
     if(!res.ok) return;
     const j = await res.json();
     currentEvents = Array.isArray(j.events) ? j.events : [];

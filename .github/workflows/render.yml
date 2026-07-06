@@ -1,9 +1,12 @@
 name: Render schedule image
 
 on:
+  push:
+    branches: [main]
+    paths: ['schedule.json']   # re-render ONLY when the schedule data actually changes
   schedule:
-    - cron: '0 * * * *'     # hourly (UTC); raise/lower to taste
-  workflow_dispatch:         # run on demand from the Actions tab
+    - cron: '5 17 * * *'       # 00:05 GMT+7 daily — refresh the "today" (วันนี้) badge on day rollover
+  workflow_dispatch:           # run on demand from the Actions tab
 
 permissions:
   contents: write            # commit schedule.png back to the repo
