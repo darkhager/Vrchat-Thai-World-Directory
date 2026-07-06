@@ -1,0 +1,44 @@
+name: Render schedule image
+
+on:
+  schedule:
+    - cron: '0 * * * *'     # hourly (UTC); raise/lower to taste
+  workflow_dispatch:         # run on demand from the Actions tab
+
+permissions:
+  contents: write            # commit schedule.png back to the repo
+
+concurrency:
+  group: render-schedule-image
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps + Chromium
+        working-directory: render
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Screenshot the schedule → schedule.png
+        working-directory: render
+        run: node shoot.mjs
+        env:
+          OUT: ../schedule.png
+      - name: Commit schedule.png if it changed
+        run: |
+          if [ -n "$(git status --porcelain schedule.png)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add schedule.png
+            git commit -m "Update schedule.png"
+            git pull --rebase origin main
+            git push
+          else
+            echo "schedule.png unchanged"
+          fi

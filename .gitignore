@@ -1,3 +1,6 @@
 # Local-only secrets — never commit
 notify/webhook.local.txt
 *.local.txt
+
+# Node deps (render/ Playwright) — installed by the workflow, never committed
+node_modules/

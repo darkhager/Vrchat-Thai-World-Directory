@@ -296,6 +296,15 @@
 </style>
 </head>
 <body>
+<style>
+  /* ── Image render mode (?view=image): a clean schedule to screenshot onto a Quad ── */
+  body.imgmode .meta, body.imgmode #actbar, body.imgmode #schedbar,
+  body.imgmode .subtitle, body.imgmode .note, body.imgmode footer{ display:none !important }
+  body.imgmode .wrap{ max-width:1000px; margin:0; padding:38px 40px 46px;
+    background:var(--page); background-attachment:scroll }
+  body.imgmode header{ margin-bottom:16px }
+  body.imgmode .legend{ margin:0 0 20px }
+</style>
 <div class="wrap">
   <header>
     <span class="eyebrow">VRChat · Thailand</span>
@@ -446,6 +455,15 @@ let currentEvents = [];
 let openOnly = (localStorage.getItem('filter') || 'open') === 'open';
 let page = localStorage.getItem('page') || 'schedule';     // 'activity' | 'schedule' | 'guide'
 let layout = localStorage.getItem('layout') || 'table';    // 'table' | 'timeline' (Schedule page)
+
+// Image render mode (?view=image): force the schedule table in dark mode and hide
+// the chrome (CSS), so a headless browser can screenshot it to schedule.png for the Quad.
+const IMG_MODE = new URLSearchParams(location.search).get('view') === 'image';
+if(IMG_MODE){
+  page = 'schedule'; layout = 'table';
+  document.documentElement.dataset.theme = 'dark';
+  document.body.classList.add('imgmode');
+}
 let lang = localStorage.getItem('lang') || 'th';           // 'th' (default) | 'en'
 
 /* ── UI strings (Thai default / English). Venue names + notes come live from the
@@ -1001,9 +1019,11 @@ async function trackVisits(){
 }
 
 fetchLive();
-fetchEvents();
-trackVisits();
-if(CONFIG.refreshMinutes > 0) setInterval(() => { fetchLive(); fetchEvents(); }, CONFIG.refreshMinutes * 60000);
+if(!IMG_MODE){                       // image mode: schedule only — skip events, counter, polling
+  fetchEvents();
+  trackVisits();
+  if(CONFIG.refreshMinutes > 0) setInterval(() => { fetchLive(); fetchEvents(); }, CONFIG.refreshMinutes * 60000);
+}
 </script>
 </body>
 </html>
