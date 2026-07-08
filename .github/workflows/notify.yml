@@ -1,8 +1,12 @@
 name: Discord open alerts
 
+# Apps Script is the clock — its 5-min trigger fires repository_dispatch the moment a
+# venue opens. GitHub's `schedule` cron is best-effort (it was firing ~every 2h, so the
+# old 10-min detection window missed ~91% of openings); repository_dispatch is not
+# throttled. Apps Script can't reach Discord (Cloudflare 40333), so this Action relays.
 on:
-  schedule:
-    - cron: '*/10 * * * *'   # every 10 min (UTC); the script computes GMT+7 itself
+  repository_dispatch:
+    types: [venue-open]
   workflow_dispatch:
     inputs:
       test:
@@ -10,7 +14,6 @@ on:
         type: boolean
         default: false
 
-# Keep WINDOW_MIN equal to the cron interval above (10).
 permissions:
   contents: read
 
@@ -29,7 +32,7 @@ jobs:
       - name: Send alerts
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          THRESHOLD_MIN: '0'
-          WINDOW_MIN: '10'
+          # via env, never inlined into `run:` — client_payload is untrusted input
+          ALERT_PAYLOAD: ${{ toJson(github.event.client_payload) }}
           TEST_SEND: ${{ inputs.test && '1' || '' }}
         run: node notify/notify.mjs

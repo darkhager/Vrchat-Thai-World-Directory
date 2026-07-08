@@ -483,12 +483,102 @@ function combineDateTime_(dateVal, timeVal, dateStr, timeStr) {
   return { start: start, end: new Date(start.getTime() + EVENT_HOURS * 3600 * 1000), allDay: false };
 }
 
-/** Run ONCE to publish schedule.json + approved_events.json every 15 minutes. */
+/* ── Discord open alerts ─────────────────────────────────────────────────────
+ * Apps Script is the CLOCK. GitHub's `schedule` cron is best-effort: an every-10-minute
+ * cron was actually firing ~every 2h, so notify.mjs's 10-min detection window missed
+ * ~91% of openings (silently — it exited 0 every run). repository_dispatch is NOT throttled.
+ *
+ * Apps Script can't POST to Discord (Cloudflare blocks it, error 40333), so we fire a
+ * repository_dispatch and the GitHub Action does the posting.
+ *
+ * Reliability: de-dup state lives here, and is saved ONLY after a successful dispatch.
+ * A late or failed tick therefore retries on the next tick instead of losing the alert.
+ * Tick frequency controls latency, never whether the alert fires.                     */
+
+const ALERT_MAX_LATE_MIN = 60;   // never announce a venue that opened >1h ago
+
+/** "20:00–22:00" → 1200 (minute-of-day of the start). null if unparseable. */
+function startMinutes_(timeStr) {
+  var first = String(timeStr).split(/[–—-]/)[0].trim();
+  var m = first.match(/(\d{1,2}):(\d{2})/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+/** Timer target: announce venues that have opened since the last tick. */
+function checkOpenings() {
+  var now    = new Date(Date.now() + 7 * 60 * 60 * 1000);   // GMT+7 wall clock
+  var dow    = now.getUTCDay();                             // 0=Sun … matches DAYS[].dow
+  var curMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  var today  = now.toISOString().slice(0, 10);
+
+  var props = PropertiesService.getScriptProperties();
+  var state = JSON.parse(props.getProperty('ALERTED') || '{}');
+  if (state.date !== today) state = { date: today, keys: [] };   // new day → clean slate
+
+  var day = buildPayload().days.filter(function (d) { return d.dow === dow; })[0];
+  if (!day) return 'no schedule row for dow=' + dow;
+
+  var hits = [];
+  day.venues.forEach(function (v) {
+    if (v.status !== 'open') return;
+    var start = startMinutes_(v.time);
+    if (start == null) return;
+    var late = curMin - start;
+    if (late < 0 || late > ALERT_MAX_LATE_MIN) return;        // not open yet / stale
+    var key = v.name + '|' + v.time;
+    if (state.keys.indexOf(key) !== -1) return;               // already announced today
+    state.keys.push(key);
+    hits.push({ name: v.name, time: v.time, discord: v.discord || '' });
+  });
+
+  if (!hits.length) {
+    props.setProperty('ALERTED', JSON.stringify(state));      // persist the daily reset
+    return 'nothing to announce (dow=' + dow + ', curMin=' + curMin + ')';
+  }
+
+  ghDispatch_('venue-open', { venues: hits });   // throws → state unsaved → retried next tick
+  props.setProperty('ALERTED', JSON.stringify(state));
+  return 'announced ' + hits.length + ' venue(s)';
+}
+
+/** Fire a repository_dispatch. Needs only Contents:write — the token we already have. */
+function ghDispatch_(eventType, clientPayload) {
+  var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) throw new Error('Set GITHUB_TOKEN in Project Settings → Script properties.');
+
+  var res = UrlFetchApp.fetch(
+    'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/dispatches', {
+      method: 'post',
+      contentType: 'application/json',
+      muteHttpExceptions: true,
+      headers: {
+        Authorization: 'Bearer ' + token,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      payload: JSON.stringify({ event_type: eventType, client_payload: clientPayload }),
+    });
+
+  var code = res.getResponseCode();
+  if (code !== 204) throw new Error('repository_dispatch failed: HTTP ' + code + ' ' + res.getContentText());
+  return 'dispatched';
+}
+
+/** Reset today's alert de-dup (testing: lets an already-announced venue fire again). */
+function resetAlerted() {
+  PropertiesService.getScriptProperties().deleteProperty('ALERTED');
+  return 'alert de-dup cleared';
+}
+
+/** Run ONCE to install both timers: publish every 15 min, open-alerts every 5 min. */
 function installTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     var h = t.getHandlerFunction();
-    if (h === 'publishJson' || h === 'publishEvents' || h === 'publishAll') ScriptApp.deleteTrigger(t);
+    if (h === 'publishJson' || h === 'publishEvents' || h === 'publishAll' || h === 'checkOpenings') {
+      ScriptApp.deleteTrigger(t);
+    }
   });
   ScriptApp.newTrigger('publishAll').timeBased().everyMinutes(15).create();
-  return 'trigger installed';
+  ScriptApp.newTrigger('checkOpenings').timeBased().everyMinutes(5).create();
+  return 'triggers installed';
 }

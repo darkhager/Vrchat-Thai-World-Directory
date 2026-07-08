@@ -1,42 +1,41 @@
-// Posts a Discord alert when a VRChat Thailand venue is about to open.
+// Posts a Discord alert when a VRChat Thailand venue opens.
 // No dependencies — runs on GitHub Actions (Node 18+ has global fetch).
+//
+// This script does NOT decide when to alert. Apps Script is the clock: its 5-minute
+// trigger detects the opening, de-dups it, and fires a repository_dispatch carrying
+// the venues. We just relay that to Discord.
+//
+// Why: GitHub's `schedule` cron is best-effort. A `*/10` cron was actually firing
+// about every 2 hours, so the old 10-minute detection window missed ~91% of openings
+// (and exited 0 every time, so nothing ever looked broken). `repository_dispatch` is
+// not throttled. Apps Script can't POST to Discord itself (Cloudflare blocks it,
+// error 40333), which is why this Action still exists — as the transport.
 //
 // Config (env):
 //   DISCORD_WEBHOOK_URL  the Discord webhook to post to (required unless DRY_RUN)
-//   THRESHOLD_MIN        minutes before open to alert; 0 = at open time  (default 0)
-//   WINDOW_MIN           run cadence in minutes; keep equal to the cron  (default 10)
-//   SCHEDULE_URL         override the schedule.json source
+//   ALERT_PAYLOAD        repository_dispatch client_payload: { venues:[{name,time,discord}] }
+//   SCHEDULE_URL         override the schedule source (TEST_SEND only)
 //   DRY_RUN=1            print the payload instead of POSTing
-//   TEST_SEND=1          post one sample alert regardless of the window (manual verify)
-//   FORCE_DOW / FORCE_MIN  test-only: pretend it's this weekday / minute-of-day
+//   TEST_SEND=1          post one sample alert regardless of payload (manual verify)
 
 const SCHEDULE_URL = process.env.SCHEDULE_URL
   || 'https://darkhager.github.io/Vrchat-Thai-World-Directory/schedule.json';
 const WEBHOOK = (process.env.DISCORD_WEBHOOK_URL || '').replace(/^﻿/, '').trim();
-const THRESHOLD_MIN = Number(process.env.THRESHOLD_MIN ?? 0);
-const WINDOW_MIN = Number(process.env.WINDOW_MIN || 10); // should match the cron interval
 const DRY_RUN = /^(1|true|yes)$/i.test(process.env.DRY_RUN || '');
 const TEST_SEND = /^(1|true|yes)$/i.test(process.env.TEST_SEND || '');
 
 const die = (msg) => { console.error(msg); process.exit(1); };
 
-// Current wall-clock time in GMT+7 (Thailand), independent of the runner's timezone.
-const nowGmt7 = new Date(Date.now() + 7 * 60 * 60 * 1000);
-const dow = process.env.FORCE_DOW !== undefined
-  ? Number(process.env.FORCE_DOW)                       // 0=Sun … 1=Mon … matches schedule "dow"
-  : nowGmt7.getUTCDay();
-const curMin = process.env.FORCE_MIN !== undefined
-  ? Number(process.env.FORCE_MIN)
-  : nowGmt7.getUTCHours() * 60 + nowGmt7.getUTCMinutes();
-
-// "20:00–21:30" -> 1200 (start minute-of-day). null if unparseable.
-function startMinutes(timeStr) {
-  const first = String(timeStr).split(/[–—-]/)[0].trim();
-  const m = first.match(/(\d{1,2}):(\d{2})/);
-  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
-}
-
 const startText = (timeStr) => String(timeStr).split(/[–—-]/)[0].trim();
+
+/** Venues carried by the repository_dispatch. Empty for workflow_dispatch (payload is "null"). */
+function dispatchedVenues() {
+  const raw = process.env.ALERT_PAYLOAD;
+  if (!raw || raw === 'null') return [];
+  let p;
+  try { p = JSON.parse(raw); } catch { return []; }
+  return Array.isArray(p && p.venues) ? p.venues : [];
+}
 
 async function main() {
   if (!WEBHOOK && !DRY_RUN) {
@@ -44,58 +43,35 @@ async function main() {
     console.log('No DISCORD_WEBHOOK_URL configured; skipping.');
     return;
   }
-  const res = await fetch(SCHEDULE_URL + (SCHEDULE_URL.includes('?') ? '&' : '?') + 'cb=' + Date.now());
-  if (!res.ok) die(`Failed to fetch schedule.json: HTTP ${res.status}`);
-  const days = (await res.json()).days || [];
-  const today = days.find(d => d.dow === dow);
 
   if (TEST_SEND) {
     // Manual verification: always post one sample so "Run workflow" is visibly working.
-    const sample = (today?.venues || []).find(v => v.status === 'open')
-      || days.flatMap(d => d.venues || []).find(v => v.status === 'open');
+    const res = await fetch(SCHEDULE_URL + (SCHEDULE_URL.includes('?') ? '&' : '?') + 'cb=' + Date.now());
+    if (!res.ok) die(`Failed to fetch schedule.json: HTTP ${res.status}`);
+    const days = (await res.json()).days || [];
+    const sample = days.flatMap(d => d.venues || []).find(v => v.status === 'open');
     if (!sample) die('No open venue found to build a test message.');
-    await send([{ v: sample, mins: THRESHOLD_MIN }], true);
+    await send([sample], true);
     console.log('Test alert sent.');
     return;
   }
 
-  if (!today) { console.log(`No schedule entry for dow=${dow}; nothing to do.`); return; }
-
-  // Stateless de-dup: each venue crosses this window (THRESHOLD-WINDOW, THRESHOLD] once per day.
-  // With THRESHOLD=0 the window is (-WINDOW, 0] — i.e. the first run at/after a venue opens.
-  const lo = THRESHOLD_MIN - WINDOW_MIN; // exclusive
-  const hi = THRESHOLD_MIN;              // inclusive
-  const hits = [];
-  for (const v of today.venues || []) {
-    if (v.status !== 'open') continue;
-    const start = startMinutes(v.time);
-    if (start == null) continue;
-    const mins = start - curMin;
-    if (mins > lo && mins <= hi) hits.push({ v, mins });
-  }
-
-  if (!hits.length) {
-    console.log(`No venues in the ${lo}–${hi} min window (dow=${dow}, curMin=${curMin}).`);
-    return;
-  }
-  await send(hits, false);
-  console.log(`Sent alert for ${hits.length} venue(s).`);
+  const venues = dispatchedVenues();
+  if (!venues.length) { console.log('No venues in the dispatch payload; nothing to do.'); return; }
+  await send(venues, false);
+  console.log(`Sent alert for ${venues.length} venue(s).`);
 }
 
-async function send(hits, isTest) {
-  const atOpen = THRESHOLD_MIN <= 0;
-  const fields = hits.map(({ v, mins }) => ({
+async function send(venues, isTest) {
+  const fields = venues.map((v) => ({
     name: `🟢 ${v.name}`,
-    value: (atOpen
-      ? `เปิดแล้ว ${startText(v.time)} / open now`
-      : `เปิด ${startText(v.time)} (อีก ~${mins} นาที / opens in ~${mins} min)`)
+    value: `เปิดแล้ว ${startText(v.time)} / open now`
       + (v.discord ? `\n[Discord](${v.discord})` : ''),
   }));
   const payload = {
     username: 'ตารางหนีเที่ยว Vrchat',
     embeds: [{
-      title: (isTest ? '🧪 ' : (atOpen ? '🟢 ' : '🔔 '))
-        + (atOpen ? 'เปิดแล้ว / Now open' : 'เปิดเร็ว ๆ นี้ / Opening soon'),
+      title: (isTest ? '🧪 ' : '🟢 ') + 'เปิดแล้ว / Now open',
       color: 0x2ecc71,
       fields,
       footer: { text: 'darkhager.github.io/Vrchat-Thai-World-Directory' + (isTest ? ' · test' : '') },
