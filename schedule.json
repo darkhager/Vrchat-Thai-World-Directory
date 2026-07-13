@@ -23,7 +23,7 @@
         {
           "time": "20:30–22:30",
           "name": "Vestella Bar",
-          "status": "open",
+          "status": "renovate",
           "discord": "https://discord.gg/JdPfFs7hAa",
           "note": ""
         },
@@ -160,7 +160,7 @@
         {
           "time": "20:30–22:30",
           "name": "Vestella Bar",
-          "status": "open",
+          "status": "renovate",
           "discord": "https://discord.gg/JdPfFs7hAa",
           "note": ""
         },
