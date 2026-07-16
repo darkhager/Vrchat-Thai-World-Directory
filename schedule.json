@@ -81,14 +81,14 @@
         {
           "time": "20:00–22:00",
           "name": "2Hours Coffee",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/zhsqhr2SyT",
           "note": ""
         },
         {
           "time": "20:00–22:00",
           "name": "Hikari 𝓩∅",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/2FXRRbYejs",
           "note": ""
         }
@@ -110,7 +110,7 @@
         {
           "time": "21:00–23:00",
           "name": "SaengJan Night Club",
-          "status": "open",
+          "status": "closed",
           "discord": "https://discord.gg/m5mV3nnSeb",
           "note": ""
         },
