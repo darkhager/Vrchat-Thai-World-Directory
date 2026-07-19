@@ -881,6 +881,23 @@ function draw(){
 function render(schedule){ currentData = schedule; draw(); }
 render(SCHEDULE);   // instant paint from the saved copy; live sync runs below
 
+/* Scroll the Timeline layout so today's day row lands at the top — only on
+   entering that view (initial load, or switching page/layout into it), not
+   on every draw() (periodic sync, filter toggle would otherwise yank the scroll).
+   When today is late in the week (Sat/Sun), there may not be enough content
+   below it to scroll that far — the page pads itself just enough so it can. */
+function scrollToToday(){
+  document.body.style.paddingBottom = '';
+  if(page !== 'schedule' || layout !== 'timeline') return;
+  const el = document.querySelector('.tg-dayhead.today');
+  if(!el) return;
+  const targetY = window.scrollY + el.getBoundingClientRect().top;
+  const maxY = document.documentElement.scrollHeight - window.innerHeight;
+  if(targetY > maxY) document.body.style.paddingBottom = (targetY - maxY) + 'px';
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+}
+scrollToToday();
+
 /* ── Toggles (theme + layout; both remembered — dark & table are the defaults) ── */
 const themeBtn = document.getElementById('themeToggle');
 function paintTheme(){ themeBtn.textContent = document.documentElement.dataset.theme === 'light' ? tr('light') : tr('dark'); }
@@ -903,11 +920,11 @@ function paintPage(){
 }
 pageTabs.addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
-  page = b.dataset.page; localStorage.setItem('page', page); paintPage(); draw();
+  page = b.dataset.page; localStorage.setItem('page', page); paintPage(); draw(); scrollToToday();
 });
 layoutSeg.addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
-  layout = b.dataset.layout; localStorage.setItem('layout', layout); paintPage(); draw();
+  layout = b.dataset.layout; localStorage.setItem('layout', layout); paintPage(); draw(); scrollToToday();
 });
 paintPage();
 
