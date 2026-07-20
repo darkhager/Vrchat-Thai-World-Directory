@@ -182,6 +182,18 @@ function ghCommit(path, json) {
   return 'committed';
 }
 
+/** Given a form file-upload answer (a Drive file URL, or comma-separated URLs
+ *  if multiple files are allowed — only the first is used), make the file
+ *  link-shareable and return a direct-view image URL. Empty string if there's
+ *  no file — the site just shows no picture for that event. */
+function eventImageUrl_(driveUrl) {
+  const m = String(driveUrl).match(/[-\w]{25,}/);
+  if (!m) return '';
+  const fileId = m[0];
+  DriveApp.getFileById(fileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w600';
+}
+
 function publishJson()   { return ghCommit(GH_PATH,     JSON.stringify(buildPayload(), null, 2)); }
 function publishEvents() { return ghCommit(EVENTS_PATH, JSON.stringify(buildEvents(),  null, 2)); }
 
@@ -219,7 +231,7 @@ function setupApprovalColumn() {
   return 'Status dropdown at column ' + col;
 }
 
-/** Read approved form rows → { events:[{name,by,type,date,time,link,note}] }.
+/** Read approved form rows → { events:[{name,by,type,date,time,link,note,image}] }.
  *  Never includes the submitter email or timestamp. */
 function buildEvents() {
   const sheet = eventsSheet_();
@@ -233,7 +245,7 @@ function buildEvents() {
     return -1;
   }
   const cName = col('event name'), cBy = col('event by'), cLink = col('event links'),
-        cType = col('event type'),
+        cType = col('event type'), cPic = col('event picture'),
         cOtD = col('one time event date'), cOtT = col('one time event time'),
         cWkD = col('weekly event date'),   cWkT = col('weekly event time'),
         cSpD = col('special pattern'),      cSpT = col('special event time'),
@@ -250,6 +262,12 @@ function buildEvents() {
              (b >= 0 && String(row[b]).trim()) ||
              (c >= 0 && String(row[c]).trim()) || '';
     }
+    var image = '';
+    const picUrl = cPic >= 0 ? String(row[cPic]).trim() : '';
+    if (picUrl) {
+      try { image = eventImageUrl_(picUrl); }
+      catch (e) { image = ''; }   // one bad/inaccessible file shouldn't block the whole publish
+    }
     events.push({
       name: name,
       by:   cBy   >= 0 ? String(row[cBy]).trim()   : '',
@@ -258,6 +276,7 @@ function buildEvents() {
       time: pick(cOtT, cWkT, cSpT),
       link: cLink >= 0 ? String(row[cLink]).trim() : '',
       note: cNote >= 0 ? String(row[cNote]).trim() : '',
+      image: image,
     });
   }
   return { events: events };

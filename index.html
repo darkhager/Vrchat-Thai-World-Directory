@@ -249,11 +249,12 @@
   .fi-main{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
   .fi-top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
   .fi-name{font-size:15px;font-weight:600;color:var(--ink)}
-  .fi-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .fi-date,.fi-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
   .fi-by{font-size:12px;color:var(--muted)}
   .fi-note{font-size:12px;color:var(--muted);line-height:1.5}
   .fi-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
     padding:2px 8px;border-radius:999px;background:rgba(140,100,255,.22);color:#b9a3ff;align-self:center}
+  .fi-pic{width:56px;height:56px;flex:none;border-radius:10px;object-fit:cover}
   .feed-empty{color:var(--muted);font-size:13px;font-style:italic;padding:2px 6px 10px}
 
   /* ── Newbie guide (คู่มือมือใหม่) ── */
@@ -480,17 +481,15 @@ const T = {
     seg_table:'▦ ตาราง', seg_timeline:'📊 ไทม์ไลน์',
     lg_open:'เข้าได้เลย', lg_reserve:'ต้องจองก่อน', lg_renovate:'ปิดปรับปรุง', lg_closed:'ปิดสัปดาห์นี้',
     venuenote:'📌 กดที่ชื่อร้านเพื่อเปิด Discord ของร้าน · รายละเอียดเฉพาะของแต่ละร้านดูได้จากหมายเหตุ',
-    today:'วันนี้', tomorrow:'พรุ่งนี้',
-    more_events:'📅 อีเวนต์เพิ่มเติม', upcoming:'เร็ว ๆ นี้', special:'🗓 พิเศษ / ตามรอบ',
+    today:'วันนี้',
+    ev_ongoing:'🔴 กำลังจัดอยู่', ev_upcoming:'⏳ เร็ว ๆ นี้', ev_completed:'✅ จบแล้ว',
     tag_event:'อีเวนต์', by:'โดย',
-    empty_feed:'ไม่มีร้านเปิด', empty_timeline:'ไม่มีร้านเปิด',
+    empty_feed:'ไม่มีอีเวนต์', empty_timeline:'ไม่มีร้านเปิด',
     foot_group:'Join กลุ่มในเกมเพื่อรับข่าวตารางร้าน',
     foot_contact:'ติดต่อ / แก้ไข: discord', foot_sheet:'Google Sheet ต้นฉบับ', visits:'ผู้เข้าชม',
     sync_loading:'⏳ กำลังโหลดตารางล่าสุด…', sync_syncing:'⟳ กำลังซิงค์…',
     sync_live:'● อัปเดตล่าสุด', sync_live_sheet:'● ซิงค์จาก Google Sheet เมื่อ',
     sync_err:'⚠ ซิงค์ไม่สำเร็จ — แสดงข้อมูลที่บันทึกไว้',
-    WD:['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'],
-    MON:['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],
   },
   en: {
     subtitle:'Built with leftover Claude tokens',
@@ -503,17 +502,15 @@ const T = {
     seg_table:'▦ Table', seg_timeline:'📊 Timeline',
     lg_open:'Free entry', lg_reserve:'Reserve', lg_renovate:'Renovating', lg_closed:'Closed this week',
     venuenote:"📌 Tap a venue's name to open its Discord — venue-specific details are in each venue's note.",
-    today:'Today', tomorrow:'Tomorrow',
-    more_events:'📅 More events', upcoming:'upcoming', special:'🗓 Special / pattern',
+    today:'Today',
+    ev_ongoing:'🔴 Ongoing', ev_upcoming:'⏳ Upcoming', ev_completed:'✅ Completed',
     tag_event:'Event', by:'by',
-    empty_feed:'No open venues', empty_timeline:'No scheduled openings',
+    empty_feed:'No events', empty_timeline:'No scheduled openings',
     foot_group:'Join the in-game group to get schedule news',
     foot_contact:'Contact / edit: discord', foot_sheet:'Original Google Sheet', visits:'visits',
     sync_loading:'⏳ Loading live schedule…', sync_syncing:'⟳ Syncing…',
     sync_live:'● Live · updated', sync_live_sheet:'● Live · synced from the Google Sheet at',
     sync_err:'⚠ Could not sync — showing saved copy',
-    WD:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
-    MON:['January','February','March','April','May','June','July','August','September','October','November','December'],
   }
 };
 const tr = k => (T[lang][k] ?? T.en[k] ?? k);
@@ -621,60 +618,53 @@ function timelineHTML(schedule){
   </div></div>`;
 }
 
-/* Layout 3 — Activity feed (today-first, date-grouped: open shops + events) */
+/* Layout 3 — Activity feed (approved sheet events only, grouped by status) */
 function gmt7Base(){                                   // a Date whose local fields read as GMT+7
   const utc = Date.now() + new Date().getTimezoneOffset() * 60000;
   return new Date(utc + 7 * 3600000);
 }
-function eventDateKey(ev){
-  if(!ev || !ev.date) return null;
-  const d = new Date(ev.date);
-  return isNaN(d) ? null : d.toDateString();
-}
-function venueItemHTML(v, day){
-  const live = isLiveNow(v, day) ? ' live' : '';
-  const inner = `<div class="fi-main"><div class="fi-top">`
-    + `<span class="fi-time">${esc(v.time)}</span><span class="fi-name">${esc(v.name)}</span></div>`
-    + (v.note ? `<span class="fi-note">📝 ${esc(v.note)}</span>` : '') + `</div>`;
-  return v.discord
-    ? `<a class="feed-item${live}" href="${esc(v.discord)}" target="_blank" rel="noopener"><i class="dot ${v.status||''}"></i>${inner}</a>`
-    : `<div class="feed-item${live}"><i class="dot ${v.status||''}"></i>${inner}</div>`;
+/* Classify an event against "now" (GMT+7). Dates the sheet can't give us a real
+   calendar date for (weekly/recurring rows) can't be proven completed, so they
+   default to upcoming. */
+function eventStatus(ev){
+  const d = ev && ev.date ? new Date(ev.date) : null;
+  if(!d || isNaN(d)) return 'upcoming';
+  const now = gmt7Base();
+  if(d.toDateString() !== now.toDateString()) return d < now ? 'completed' : 'upcoming';
+  const r = parseRange(ev.time);
+  if(!r) return 'ongoing';
+  const mins = now.getHours()*60 + now.getMinutes();
+  return mins < r.s ? 'upcoming' : mins < r.e ? 'ongoing' : 'completed';
 }
 function eventItemHTML(ev){
   const inner = `<div class="fi-main"><div class="fi-top">`
+    + (ev.date ? `<span class="fi-date">${esc(ev.date)}</span>` : '')
     + (ev.time ? `<span class="fi-time">${esc(ev.time)}</span>` : '')
     + `<span class="fi-name">${esc(ev.name||tr('tag_event'))}</span><span class="fi-tag">${esc(tr('tag_event'))}</span></div>`
     + (ev.by ? `<span class="fi-by">${esc(tr('by'))} ${esc(ev.by)}</span>` : '')
     + (ev.note ? `<span class="fi-note">📝 ${esc(ev.note)}</span>` : '') + `</div>`;
   const dot = `<i class="dot" style="background:#b9a3ff"></i>`;
+  const pic = ev.image ? `<img class="fi-pic" src="${esc(ev.image)}" alt="" loading="lazy">` : '';
   return ev.link
-    ? `<a class="feed-item" href="${esc(ev.link)}" target="_blank" rel="noopener">${dot}${inner}</a>`
-    : `<div class="feed-item">${dot}${inner}</div>`;
+    ? `<a class="feed-item" href="${esc(ev.link)}" target="_blank" rel="noopener">${dot}${inner}${pic}</a>`
+    : `<div class="feed-item">${dot}${inner}${pic}</div>`;
 }
-function activityHTML(schedule, events){
-  const byDow = {};
-  let spc = null;
-  schedule.forEach(d => { if(d.dow >= 0 && d.dow <= 6) byDow[d.dow] = d; else spc = d; });
-  const evList = (events || []).slice();
-  const used = new Set();
-  const base = gmt7Base();
-  let html = '<div class="feed">';
-  for(let i = 0; i < 7; i++){
-    const dt = new Date(base.getTime() + i * 86400000);
-    const dow = dt.getDay(), dkey = dt.toDateString();
-    const label = i === 0 ? tr('today') : i === 1 ? tr('tomorrow') : T[lang].WD[dow];
-    const sub = `${dt.getDate()} ${T[lang].MON[dt.getMonth()]} ${dt.getFullYear()}`;
-    const venues = byDow[dow] ? byDow[dow].venues : [];
-    const dayEv = evList.filter((ev, idx) => { if(eventDateKey(ev) === dkey){ used.add(idx); return true; } return false; });
-    let items = dayEv.map(eventItemHTML).join('') + venues.map(v => venueItemHTML(v, byDow[dow])).join('');
-    if(!items) items = `<div class="feed-empty">${esc(tr('empty_feed'))}</div>`;
-    html += `<div class="feed-group"><div class="feed-date">${label}<span>${esc(sub)}</span></div>${items}</div>`;
-  }
-  const extra = evList.filter((ev, idx) => !used.has(idx));
-  if(extra.length)
-    html += `<div class="feed-group"><div class="feed-date">${tr('more_events')}<span>${tr('upcoming')}</span></div>${extra.map(eventItemHTML).join('')}</div>`;
-  if(spc && spc.venues.length)
-    html += `<div class="feed-group"><div class="feed-date">${tr('special')}<span>${esc((lang==='th'?spc.th:spc.en) || '')}</span></div>${spc.venues.map(v => venueItemHTML(v, spc)).join('')}</div>`;
+function activityHTML(events){
+  const groups = { ongoing: [], upcoming: [], completed: [] };
+  (events || []).forEach(ev => groups[eventStatus(ev)].push(ev));
+  groups.upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
+  groups.completed.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const total = groups.ongoing.length + groups.upcoming.length + groups.completed.length;
+  const showCompleted = total < 5;                     // small feeds show everything so the page isn't sparse
+  const sections = [['ev_ongoing', groups.ongoing], ['ev_upcoming', groups.upcoming]];
+  if(showCompleted) sections.push(['ev_completed', groups.completed]);
+  let html = '<div class="feed">', any = false;
+  sections.forEach(([labelKey, list]) => {
+    if(!list.length) return;
+    any = true;
+    html += `<div class="feed-group"><div class="feed-date">${esc(tr(labelKey))}</div>${list.map(eventItemHTML).join('')}</div>`;
+  });
+  if(!any) html += `<div class="feed-empty">${esc(tr('empty_feed'))}</div>`;
   return html + '</div>';
 }
 
@@ -872,31 +862,23 @@ function draw(){
     if(!el.querySelector('.guide')) el.innerHTML = guideHTML();
   }else if(page === 'activity'){
     el.className = '';
-    el.innerHTML = activityHTML(data, currentEvents);
+    el.innerHTML = activityHTML(currentEvents);
   }else{
     el.className = 'table';
-    el.innerHTML = layout === 'timeline' ? timelineHTML(data) : tableHTML(data);
+    el.innerHTML = layout === 'timeline' ? timelineHTML(reorderFromToday(data)) : tableHTML(data);
   }
+}
+/* Timeline-only: rotate the Mon–Sun days so today's row is first (the
+   "ร้านเปิดตามหมายเหตุ" special-pattern entry has no dow, stays last). */
+function reorderFromToday(schedule){
+  const days = schedule.filter(d => d.dow !== undefined);
+  const special = schedule.filter(d => d.dow === undefined);
+  const idx = days.findIndex(d => d.dow === todayDow);
+  if(idx <= 0) return schedule;
+  return [...days.slice(idx), ...days.slice(0, idx), ...special];
 }
 function render(schedule){ currentData = schedule; draw(); }
 render(SCHEDULE);   // instant paint from the saved copy; live sync runs below
-
-/* Scroll the Timeline layout so today's day row lands at the top — only on
-   entering that view (initial load, or switching page/layout into it), not
-   on every draw() (periodic sync, filter toggle would otherwise yank the scroll).
-   When today is late in the week (Sat/Sun), there may not be enough content
-   below it to scroll that far — the page pads itself just enough so it can. */
-function scrollToToday(){
-  document.body.style.paddingBottom = '';
-  if(page !== 'schedule' || layout !== 'timeline') return;
-  const el = document.querySelector('.tg-dayhead.today');
-  if(!el) return;
-  const targetY = window.scrollY + el.getBoundingClientRect().top;
-  const maxY = document.documentElement.scrollHeight - window.innerHeight;
-  if(targetY > maxY) document.body.style.paddingBottom = (targetY - maxY) + 'px';
-  window.scrollTo({ top: targetY, behavior: 'smooth' });
-}
-scrollToToday();
 
 /* ── Toggles (theme + layout; both remembered — dark & table are the defaults) ── */
 const themeBtn = document.getElementById('themeToggle');
@@ -920,11 +902,11 @@ function paintPage(){
 }
 pageTabs.addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
-  page = b.dataset.page; localStorage.setItem('page', page); paintPage(); draw(); scrollToToday();
+  page = b.dataset.page; localStorage.setItem('page', page); paintPage(); draw();
 });
 layoutSeg.addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
-  layout = b.dataset.layout; localStorage.setItem('layout', layout); paintPage(); draw(); scrollToToday();
+  layout = b.dataset.layout; localStorage.setItem('layout', layout); paintPage(); draw();
 });
 paintPage();
 
