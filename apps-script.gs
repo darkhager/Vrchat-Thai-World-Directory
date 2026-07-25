@@ -182,16 +182,35 @@ function ghCommit(path, json) {
   return 'committed';
 }
 
-/** Given a form file-upload answer (a Drive file URL, or comma-separated URLs
- *  if multiple files are allowed — only the first is used), make the file
- *  link-shareable and return a direct-view image URL. Empty string if there's
- *  no file — the site just shows no picture for that event. */
+/** Given a form file-upload/link answer (a Drive file URL), return a direct-view
+ *  image URL. Empty string if there's no file. Tries to make the file
+ *  link-shareable, but that only works for files we own (the native file-upload
+ *  question) — a manually pasted link to someone else's Drive file can't be
+ *  re-shared by us, so a sharing failure there is expected and ignored;
+ *  we just assume the submitter already made it viewable. */
 function eventImageUrl_(driveUrl) {
   const m = String(driveUrl).match(/[-\w]{25,}/);
   if (!m) return '';
   const fileId = m[0];
-  DriveApp.getFileById(fileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  try { DriveApp.getFileById(fileId).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }
+  catch (e) { /* not our file to re-share — ignore */ }
   return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w600';
+}
+
+/** "7:00:00 PM" (or "19:00") → "19:00". Empty string if unparseable. */
+function to24h_(str) {
+  const m = String(str || '').trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?$/);
+  if (!m) return '';
+  var h = +m[1];
+  const min = m[2], ap = (m[3] || '').toUpperCase();
+  if (ap === 'PM' && h !== 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  return (h < 10 ? '0' + h : String(h)) + ':' + min;
+}
+/** Two time-of-day cells → "19:00-21:00" (or just one side if the other's blank). */
+function combineTime_(start, end) {
+  const s = to24h_(start), e = to24h_(end);
+  return s && e ? (s + '-' + e) : (s || e);
 }
 
 function publishJson()   { return ghCommit(GH_PATH,     JSON.stringify(buildPayload(), null, 2)); }
@@ -231,8 +250,12 @@ function setupApprovalColumn() {
   return 'Status dropdown at column ' + col;
 }
 
-/** Read approved form rows → { events:[{name,by,type,date,time,link,note,image}] }.
- *  Never includes the submitter email or timestamp. */
+/** Read approved, event-type form rows → { events:[{name,by,date,time,link,note,image}] }.
+ *  Never includes the submitter email or timestamp.
+ *  Column names matched here are the REAL headers on the live form/sheet —
+ *  confirmed 2026-07-20 by opening it directly, since several differ from what
+ *  the field labels might suggest (e.g. times are split across separate
+ *  "* Start Time"/"* End Time" columns, not a single range column). */
 function buildEvents() {
   const sheet = eventsSheet_();
   const data = sheet.getDataRange().getDisplayValues();
@@ -244,38 +267,39 @@ function buildEvents() {
     }
     return -1;
   }
-  const cName = col('event name'), cBy = col('event by'), cLink = col('event links'),
-        cType = col('event type'), cPic = col('event picture'),
-        cOtD = col('one time event date'), cOtT = col('one time event time'),
-        cWkD = col('weekly event date'),   cWkT = col('weekly event time'),
-        cSpD = col('special pattern'),      cSpT = col('special event time'),
+  const cName = col('name'), cBy = col('owner'), cLink = col('links'),
+        cKind = col('ร้านหรือ'), cPic = col('รูปภาพ'),
+        cOtD = col('one time date'), cOtS = col('one time start time'), cOtE = col('one time end time'),
+        cWkD = col('weekly date'),   cWkS = col('weekly start time'),   cWkE = col('weekly end time'),
+        cSpD = col('special pattern'), cSpS = col('special start time'), cSpE = col('special end time'),
         cNote = col('note'), cStatus = col('status');
+
+  function cell(row, idx) { return idx >= 0 ? String(row[idx]).trim() : ''; }
 
   const events = [];
   for (var r = 1; r < data.length; r++) {
     const row = data[r];
     if (cStatus < 0 || String(row[cStatus]).trim().toLowerCase() !== 'approved') continue;
-    const name = cName >= 0 ? String(row[cName]).trim() : '';
+    if (cKind >= 0 && cell(row, cKind).toLowerCase().indexOf('event') === -1) continue;   // skip venue/shop submissions — same form serves both
+    const name = cell(row, cName);
     if (!name) continue;
-    function pick(a, b, c) {
-      return (a >= 0 && String(row[a]).trim()) ||
-             (b >= 0 && String(row[b]).trim()) ||
-             (c >= 0 && String(row[c]).trim()) || '';
-    }
+    function pick(a, b, c) { return cell(row, a) || cell(row, b) || cell(row, c); }
+
     var image = '';
-    const picUrl = cPic >= 0 ? String(row[cPic]).trim() : '';
+    const picUrl = cell(row, cPic);
     if (picUrl) {
       try { image = eventImageUrl_(picUrl); }
       catch (e) { image = ''; }   // one bad/inaccessible file shouldn't block the whole publish
     }
     events.push({
       name: name,
-      by:   cBy   >= 0 ? String(row[cBy]).trim()   : '',
-      type: cType >= 0 ? String(row[cType]).trim() : '',
+      by:   cell(row, cBy),
       date: pick(cOtD, cWkD, cSpD),
-      time: pick(cOtT, cWkT, cSpT),
-      link: cLink >= 0 ? String(row[cLink]).trim() : '',
-      note: cNote >= 0 ? String(row[cNote]).trim() : '',
+      time: combineTime_(cell(row, cOtS), cell(row, cOtE))
+         || combineTime_(cell(row, cWkS), cell(row, cWkE))
+         || combineTime_(cell(row, cSpS), cell(row, cSpE)),
+      link: cell(row, cLink),
+      note: cell(row, cNote),
       image: image,
     });
   }
@@ -353,13 +377,14 @@ function notifyAndSyncEvents() {
     return -1;
   }
   const cStatus = idx('status'),
-        cName = idx('event name'), cBy = idx('event by'),
-        cType = idx('event type'), cLink = idx('event links'), cNote = idx('note'),
+        cName = idx('name'), cBy = idx('owner'), cLink = idx('links'), cNote = idx('note'),
+        cKind = idx('ร้านหรือ'),
         cAnn = H.indexOf(ANNOUNCED_HEADER), cCal = H.indexOf(CAL_ID_HEADER);
   if (cStatus < 0 || cAnn < 0 || cCal < 0) return 'run setupEventTracking() first';
 
-  const dateCols = [idx('one time event date'), idx('weekly event date'), idx('special pattern')];
-  const timeCols = [idx('one time event time'), idx('weekly event time'), idx('special event time')];
+  const dateCols  = [idx('one time date'), idx('weekly date'), idx('special pattern')];
+  const startCols = [idx('one time start time'), idx('weekly start time'), idx('special start time')];
+  const endCols   = [idx('one time end time'),   idx('weekly end time'),   idx('special end time')];
   const props    = PropertiesService.getScriptProperties();
   const botToken = props.getProperty('DISCORD_BOT_TOKEN');
   const channelId = props.getProperty('DISCORD_CHANNEL_ID');
@@ -367,6 +392,7 @@ function notifyAndSyncEvents() {
   var posted = 0, synced = 0;
   for (var r = 1; r < disp.length; r++) {
     if (String(disp[r][cStatus]).trim().toLowerCase() !== 'approved') continue;
+    if (cKind >= 0 && String(disp[r][cKind]).trim().toLowerCase().indexOf('event') === -1) continue;
     const name = cName >= 0 ? String(disp[r][cName]).trim() : '';
     if (!name) continue;
 
@@ -376,11 +402,12 @@ function notifyAndSyncEvents() {
       if (dateCols[k] >= 0 && String(disp[r][dateCols[k]]).trim()) { g = k; break; }
     }
     const dateStr = g >= 0 ? String(disp[r][dateCols[g]]).trim() : '';
-    const timeStr = g >= 0 && timeCols[g] >= 0 ? String(disp[r][timeCols[g]]).trim() : '';
+    const startStr = g >= 0 && startCols[g] >= 0 ? String(disp[r][startCols[g]]).trim() : '';
+    const endStr   = g >= 0 && endCols[g]   >= 0 ? String(disp[r][endCols[g]]).trim()   : '';
+    const timeStr = combineTime_(startStr, endStr);
     const ev = {
       name: name,
       by:   cBy   >= 0 ? String(disp[r][cBy]).trim()   : '',
-      type: cType >= 0 ? String(disp[r][cType]).trim() : '',
       link: cLink >= 0 ? String(disp[r][cLink]).trim() : '',
       note: cNote >= 0 ? String(disp[r][cNote]).trim() : '',
       dateStr: dateStr, timeStr: timeStr,
@@ -396,10 +423,7 @@ function notifyAndSyncEvents() {
 
     // 2) Calendar — once per row, only if we can place it on a date.
     if (!String(disp[r][cCal]).trim()) {
-      const when = combineDateTime_(
-        g >= 0 ? vals[r][dateCols[g]] : '',
-        g >= 0 && timeCols[g] >= 0 ? vals[r][timeCols[g]] : '',
-        dateStr, timeStr);
+      const when = combineDateTime_('', '', dateStr, timeStr);
       if (when) {
         const id = createCalEvent_(ev, when, g === 1 /* weekly */);
         if (id) { sheet.getRange(r + 1, cCal + 1).setValue(id); synced++; }
@@ -418,7 +442,6 @@ function postDiscord_(botToken, channelId, ev) {
   if (ev.by) lines.push('by ' + ev.by);
   var when = [ev.dateStr, ev.timeStr].filter(Boolean).join(' ');
   if (when)    lines.push('🗓 ' + when);
-  if (ev.type) lines.push('🏷 ' + ev.type);
   if (ev.note) lines.push(ev.note);
   if (ev.link) lines.push(ev.link);
   var content = ('**📢 New event: ' + ev.name + '**\n' + lines.join('\n')).slice(0, 1900);
@@ -458,7 +481,7 @@ function postDiscord_(botToken, channelId, ev) {
 function createCalEvent_(ev, when, weekly) {
   const cal = eventsCalendar_();
   const title = ev.name + (ev.by ? ' — ' + ev.by : '');
-  const opts = { description: [ev.type && ('Type: ' + ev.type), ev.note, ev.link].filter(Boolean).join('\n') };
+  const opts = { description: [ev.note, ev.link].filter(Boolean).join('\n') };
   try {
     if (weekly) {
       const rec = CalendarApp.newRecurrence().addWeeklyRule();

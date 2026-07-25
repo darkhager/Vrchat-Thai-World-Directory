@@ -235,26 +235,28 @@
   .seg button.on{background:linear-gradient(95deg,#7c4dff,#d24ad0);color:#fff;box-shadow:0 6px 16px rgba(140,77,255,.28)}
 
   /* ── Activity feed ── */
-  .feed{max-width:680px;margin:0 auto}
+  .feed{max-width:760px;margin:0 auto}
   .feed-group{margin-bottom:16px}
   .feed-date{position:sticky;top:0;z-index:2;backdrop-filter:blur(6px);background:var(--feedhead);
     padding:9px 6px;margin-bottom:12px;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--ink);text-transform:uppercase}
   .feed-date span{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px}
-  .feed-item{display:flex;align-items:flex-start;gap:11px;
-    background:var(--panel);border:1px solid var(--line);border-radius:13px;
-    padding:11px 14px;margin-bottom:8px;text-decoration:none;color:inherit;
+  .feed-item{display:flex;align-items:flex-start;gap:16px;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:18px 20px;margin-bottom:12px;text-decoration:none;color:inherit;
     transition:transform .12s,box-shadow .12s}
   a.feed-item:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.16)}
-  .feed-item .dot{margin-top:5px}
-  .fi-main{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
-  .fi-top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
-  .fi-name{font-size:15px;font-weight:600;color:var(--ink)}
-  .fi-date,.fi-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .fi-by{font-size:12px;color:var(--muted)}
-  .fi-note{font-size:12px;color:var(--muted);line-height:1.5}
-  .fi-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-    padding:2px 8px;border-radius:999px;background:rgba(140,100,255,.22);color:#b9a3ff;align-self:center}
-  .fi-pic{width:56px;height:56px;flex:none;border-radius:10px;object-fit:cover}
+  .feed-item .dot{margin-top:7px}
+  .fi-dt{flex:0 0 auto;display:flex;flex-direction:column;gap:2px;padding-top:1px}
+  .fi-time{font-size:15px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .fi-date{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .fi-main{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+  .fi-top{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+  .fi-name{font-size:19px;font-weight:600;color:var(--ink)}
+  .fi-by{font-size:14px;color:var(--muted)}
+  .fi-note{font-size:14px;color:var(--muted);line-height:1.5}
+  .fi-tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 10px;border-radius:999px;background:rgba(140,100,255,.22);color:#b9a3ff;align-self:center}
+  .fi-pic{flex:0 0 33%;min-width:0;aspect-ratio:4/3;border-radius:12px;object-fit:cover}
   .feed-empty{color:var(--muted);font-size:13px;font-style:italic;padding:2px 6px 10px}
 
   /* ── Newbie guide (คู่มือมือใหม่) ── */
@@ -636,18 +638,27 @@ function eventStatus(ev){
   const mins = now.getHours()*60 + now.getMinutes();
   return mins < r.s ? 'upcoming' : mins < r.e ? 'ongoing' : 'completed';
 }
+/* "2026-08-01" (or any Date-parseable sheet value) → "1 August 2026". Falls
+   back to the raw string if the sheet gave us something Date() can't parse. */
+function formatEventDate(dateStr){
+  const d = new Date(dateStr);
+  if(isNaN(d)) return dateStr;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 function eventItemHTML(ev){
-  const inner = `<div class="fi-main"><div class="fi-top">`
-    + (ev.date ? `<span class="fi-date">${esc(ev.date)}</span>` : '')
+  const dt = `<div class="fi-dt">`
     + (ev.time ? `<span class="fi-time">${esc(ev.time)}</span>` : '')
+    + (ev.date ? `<span class="fi-date">${esc(formatEventDate(ev.date))}</span>` : '')
+    + `</div>`;
+  const inner = `<div class="fi-main"><div class="fi-top">`
     + `<span class="fi-name">${esc(ev.name||tr('tag_event'))}</span><span class="fi-tag">${esc(tr('tag_event'))}</span></div>`
     + (ev.by ? `<span class="fi-by">${esc(tr('by'))} ${esc(ev.by)}</span>` : '')
     + (ev.note ? `<span class="fi-note">📝 ${esc(ev.note)}</span>` : '') + `</div>`;
   const dot = `<i class="dot" style="background:#b9a3ff"></i>`;
   const pic = ev.image ? `<img class="fi-pic" src="${esc(ev.image)}" alt="" loading="lazy">` : '';
   return ev.link
-    ? `<a class="feed-item" href="${esc(ev.link)}" target="_blank" rel="noopener">${dot}${inner}${pic}</a>`
-    : `<div class="feed-item">${dot}${inner}${pic}</div>`;
+    ? `<a class="feed-item" href="${esc(ev.link)}" target="_blank" rel="noopener">${dot}${dt}${inner}${pic}</a>`
+    : `<div class="feed-item">${dot}${dt}${inner}${pic}</div>`;
 }
 function activityHTML(events){
   const groups = { ongoing: [], upcoming: [], completed: [] };
