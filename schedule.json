@@ -306,6 +306,13 @@
           "status": "open",
           "discord": "https://discord.gg/RwQFmBGKju",
           "note": "เปิดเกือบๆทุกวัน อาจจะเปิด 23:00 หรือ 23:30"
+        },
+        {
+          "time": "",
+          "name": "Beach Bar",
+          "status": "open",
+          "discord": "",
+          "note": "ไม่รู้อะไรเลย"
         }
       ]
     }
