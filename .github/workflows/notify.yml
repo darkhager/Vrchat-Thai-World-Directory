@@ -33,7 +33,6 @@ jobs:
       - name: Send alerts
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          DISCORD_EVENT_WEBHOOK_URL: ${{ secrets.DISCORD_EVENT_WEBHOOK_URL }}
           DISPATCH_TYPE: ${{ github.event.action }}
           # via env, never inlined into `run:` — client_payload is untrusted input
           ALERT_PAYLOAD: ${{ toJson(github.event.client_payload) }}
