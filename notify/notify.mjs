@@ -15,7 +15,8 @@
 // broken). repository_dispatch is not throttled.
 //
 // Config (env):
-//   DISCORD_WEBHOOK_URL  the Discord webhook to post to (required unless DRY_RUN)
+//   DISCORD_WEBHOOK_URL  the Discord webhook(s) to post to, comma-separated for
+//                        more than one server/channel (required unless DRY_RUN)
 //   DISPATCH_TYPE        which dispatch fired this run ("venue-open" / "event-announcement")
 //   ALERT_PAYLOAD        repository_dispatch client_payload — shape depends on DISPATCH_TYPE
 //   SCHEDULE_URL         override the schedule source (TEST_SEND only)
@@ -24,7 +25,8 @@
 
 const SCHEDULE_URL = process.env.SCHEDULE_URL
   || 'https://darkhager.github.io/Vrchat-Thai-World-Directory/schedule.json';
-const WEBHOOK = (process.env.DISCORD_WEBHOOK_URL || '').replace(/^﻿/, '').trim();
+const WEBHOOKS = (process.env.DISCORD_WEBHOOK_URL || '').replace(/^﻿/, '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 const DISPATCH_TYPE = process.env.DISPATCH_TYPE || 'venue-open';
 const DRY_RUN = /^(1|true|yes)$/i.test(process.env.DRY_RUN || '');
 const TEST_SEND = /^(1|true|yes)$/i.test(process.env.TEST_SEND || '');
@@ -45,7 +47,7 @@ function dispatchedVenues() {
 async function main() {
   if (DISPATCH_TYPE === 'event-announcement') return sendEventAnnouncement();
 
-  if (!WEBHOOK && !DRY_RUN) {
+  if (!WEBHOOKS.length && !DRY_RUN) {
     if (TEST_SEND) die('Set the DISCORD_WEBHOOK_URL secret first.');
     console.log('No DISCORD_WEBHOOK_URL configured; skipping.');
     return;
@@ -87,18 +89,20 @@ async function send(venues, isTest) {
 
   if (DRY_RUN) { console.log('[DRY_RUN] payload:\n' + JSON.stringify(payload, null, 2)); return; }
 
-  const r = await fetch(WEBHOOK, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) die(`Discord webhook POST failed: HTTP ${r.status} ${await r.text()}`);
+  for (const url of WEBHOOKS) {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) die(`Discord webhook POST failed: HTTP ${r.status} ${await r.text()}`);
+  }
 }
 
 /** event-announcement dispatch: client_payload is one event
  *  { name, by, link, note, dateStr, timeStr } — see apps-script.gs's notifyAndSyncEvents(). */
 async function sendEventAnnouncement() {
-  if (!WEBHOOK && !DRY_RUN) {
+  if (!WEBHOOKS.length && !DRY_RUN) {
     console.log('No DISCORD_WEBHOOK_URL configured; skipping.');
     return;
   }
@@ -122,13 +126,15 @@ async function sendEventAnnouncement() {
 
   if (DRY_RUN) { console.log('[DRY_RUN] event payload:\n' + JSON.stringify(payload, null, 2)); return; }
 
-  const r = await fetch(WEBHOOK, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) die(`Discord webhook POST failed: HTTP ${r.status} ${await r.text()}`);
-  console.log(`Sent event announcement for "${ev.name}".`);
+  for (const url of WEBHOOKS) {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) die(`Discord webhook POST failed: HTTP ${r.status} ${await r.text()}`);
+  }
+  console.log(`Sent event announcement for "${ev.name}" to ${WEBHOOKS.length} webhook(s).`);
 }
 
 main().catch(e => die(String((e && e.stack) || e)));
