@@ -1,26 +1,34 @@
-// Posts a Discord alert when a VRChat Thailand venue opens.
+// Posts Discord alerts on behalf of Apps Script, which can't reach discord.com
+// itself (Cloudflare blocks it, error 40333) — this Action is the transport.
 // No dependencies — runs on GitHub Actions (Node 18+ has global fetch).
 //
-// This script does NOT decide when to alert. Apps Script is the clock: its 5-minute
-// trigger detects the opening, de-dups it, and fires a repository_dispatch carrying
-// the venues. We just relay that to Discord.
+// Two unrelated things get dispatched here, distinguished by DISPATCH_TYPE
+// (github.event.action — the repository_dispatch event_type):
+//   "venue-open"         — a schedule venue just opened (the original alert).
+//   "event-announcement" — a community-submitted event got Approved.
+// Apps Script decides *when*; this script only relays to Discord.
 //
-// Why: GitHub's `schedule` cron is best-effort. A `*/10` cron was actually firing
-// about every 2 hours, so the old 10-minute detection window missed ~91% of openings
-// (and exited 0 every time, so nothing ever looked broken). `repository_dispatch` is
-// not throttled. Apps Script can't POST to Discord itself (Cloudflare blocks it,
-// error 40333), which is why this Action still exists — as the transport.
+// Why repository_dispatch: GitHub's `schedule` cron is best-effort. A `*/10` cron
+// was actually firing about every 2 hours, so the old 10-minute detection window
+// missed ~91% of venue openings (and exited 0 every time, so nothing ever looked
+// broken). repository_dispatch is not throttled.
 //
 // Config (env):
-//   DISCORD_WEBHOOK_URL  the Discord webhook to post to (required unless DRY_RUN)
-//   ALERT_PAYLOAD        repository_dispatch client_payload: { venues:[{name,time,discord}] }
-//   SCHEDULE_URL         override the schedule source (TEST_SEND only)
-//   DRY_RUN=1            print the payload instead of POSTing
-//   TEST_SEND=1          post one sample alert regardless of payload (manual verify)
+//   DISCORD_WEBHOOK_URL       venue-open webhook (required for that type unless DRY_RUN)
+//   DISCORD_EVENT_WEBHOOK_URL event-announcement webhook(s), comma-separated for
+//                             more than one channel (required for that type unless DRY_RUN)
+//   DISPATCH_TYPE             which dispatch fired this run ("venue-open" / "event-announcement")
+//   ALERT_PAYLOAD             repository_dispatch client_payload — shape depends on DISPATCH_TYPE
+//   SCHEDULE_URL              override the schedule source (TEST_SEND only)
+//   DRY_RUN=1                 print the payload instead of POSTing
+//   TEST_SEND=1               post one sample venue-open alert regardless of payload (manual verify)
 
 const SCHEDULE_URL = process.env.SCHEDULE_URL
   || 'https://darkhager.github.io/Vrchat-Thai-World-Directory/schedule.json';
 const WEBHOOK = (process.env.DISCORD_WEBHOOK_URL || '').replace(/^﻿/, '').trim();
+const EVENT_WEBHOOKS = (process.env.DISCORD_EVENT_WEBHOOK_URL || '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+const DISPATCH_TYPE = process.env.DISPATCH_TYPE || 'venue-open';
 const DRY_RUN = /^(1|true|yes)$/i.test(process.env.DRY_RUN || '');
 const TEST_SEND = /^(1|true|yes)$/i.test(process.env.TEST_SEND || '');
 
@@ -38,6 +46,8 @@ function dispatchedVenues() {
 }
 
 async function main() {
+  if (DISPATCH_TYPE === 'event-announcement') return sendEventAnnouncement();
+
   if (!WEBHOOK && !DRY_RUN) {
     if (TEST_SEND) die('Set the DISCORD_WEBHOOK_URL secret first.');
     console.log('No DISCORD_WEBHOOK_URL configured; skipping.');
@@ -86,6 +96,44 @@ async function send(venues, isTest) {
     body: JSON.stringify(payload),
   });
   if (!r.ok) die(`Discord webhook POST failed: HTTP ${r.status} ${await r.text()}`);
+}
+
+/** event-announcement dispatch: client_payload is one event
+ *  { name, by, link, note, dateStr, timeStr } — see apps-script.gs's notifyAndSyncEvents(). */
+async function sendEventAnnouncement() {
+  if (!EVENT_WEBHOOKS.length && !DRY_RUN) {
+    console.log('No DISCORD_EVENT_WEBHOOK_URL configured; skipping.');
+    return;
+  }
+
+  const raw = process.env.ALERT_PAYLOAD;
+  if (!raw || raw === 'null') { console.log('No event in the dispatch payload; nothing to do.'); return; }
+  let ev;
+  try { ev = JSON.parse(raw); } catch { console.log('Unparseable event payload; nothing to do.'); return; }
+  if (!ev || !ev.name) { console.log('Event payload missing a name; nothing to do.'); return; }
+
+  const lines = [];
+  if (ev.by) lines.push(`by ${ev.by}`);
+  const when = [ev.dateStr, ev.timeStr].filter(Boolean).join(' ');
+  if (when) lines.push(`🗓 ${when}`);
+  if (ev.note) lines.push(ev.note);
+  if (ev.link) lines.push(ev.link);
+  const payload = {
+    content: (`**📢 New event: ${ev.name}**\n` + lines.join('\n')).slice(0, 1900),
+    allowed_mentions: { parse: [] },   // submitter-supplied text can never ping @everyone/@role
+  };
+
+  if (DRY_RUN) { console.log('[DRY_RUN] event payload:\n' + JSON.stringify(payload, null, 2)); return; }
+
+  for (const url of EVENT_WEBHOOKS) {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) die(`Discord event webhook POST failed: HTTP ${r.status} ${await r.text()}`);
+  }
+  console.log(`Sent event announcement for "${ev.name}" to ${EVENT_WEBHOOKS.length} webhook(s).`);
 }
 
 main().catch(e => die(String((e && e.stack) || e)));
