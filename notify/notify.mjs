@@ -72,15 +72,19 @@ async function main() {
 }
 
 async function send(venues, isTest) {
+  // Single venue: its name leads as the embed title. Multiple at once can't all
+  // fit in one title, so fall back to the generic title with each shop named per field.
+  const single = venues.length === 1;
   const fields = venues.map((v) => ({
-    name: `🟢 ${v.name}`,
+    name: single ? '​' : `🟢 ${v.name}`,
     value: `เปิดแล้ว ${startText(v.time)} / open now`
       + (v.discord ? `\n[Discord](${v.discord})` : ''),
   }));
+  const title = (isTest ? '🧪 ' : '🟢 ') + (single ? venues[0].name : 'เปิดแล้ว / Now open');
   const payload = {
     username: 'ตารางหนีเที่ยว Vrchat',
     embeds: [{
-      title: (isTest ? '🧪 ' : '🟢 ') + 'เปิดแล้ว / Now open',
+      title,
       color: 0x2ecc71,
       fields,
       footer: { text: 'darkhager.github.io/Vrchat-Thai-World-Directory' + (isTest ? ' · test' : '') },
