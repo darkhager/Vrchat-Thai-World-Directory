@@ -306,19 +306,21 @@ function buildEvents() {
   return { events: events };
 }
 
-/* ── Discord broadcast bot + Google Calendar sync ────────────────────────────
-   When a row is APPROVED, post it once to a Discord ANNOUNCEMENT channel via a
-   bot, auto-publish it so every server that "Follows" the channel gets it, and
-   add it to a calendar. Idempotent: each row is marked so the timer never repeats.
+/* ── Discord announcements + Google Calendar sync ────────────────────────────
+   When a row is APPROVED, fire a repository_dispatch so the GitHub Action posts
+   it to Discord — Apps Script's UrlFetchApp is Cloudflare-blocked from reaching
+   discord.com directly (same reason checkOpenings() below uses this dispatch
+   path instead of posting straight from here) — and add it to a calendar.
+   Idempotent: each row is marked so the timer never repeats.
 
    Project Settings → Script properties:
-     DISCORD_BOT_TOKEN  — the bot's token (Developer Portal → Bot → Reset Token).
-     DISCORD_CHANNEL_ID — id of the Announcement channel the bot posts to.
-     CALENDAR_ID        — (optional) a specific calendar id; otherwise a dedicated
-                          "VRChat Thailand Events" calendar is created on first run.
+     CALENDAR_ID — (optional) a specific calendar id; otherwise a dedicated
+                   "VRChat Thailand Events" calendar is created on first run.
 
-   The bot needs only SEND_MESSAGES in that channel, and the channel must be an
-   Announcement channel in a Community-enabled server (so others can Follow it).
+   GitHub side: notify/notify.mjs handles the "event-announcement" dispatch
+   type, posting to the same DISCORD_WEBHOOK_URL repository secret already
+   used for venue-open alerts.
+
    Run setupEventTracking() ONCE: it adds the marker columns, creates the
    calendar, and triggers the one-time Calendar authorization prompt. No
    redeploy is needed — the timer runs the latest SAVED code. */
@@ -385,9 +387,6 @@ function notifyAndSyncEvents() {
   const dateCols  = [idx('one time date'), idx('weekly date'), idx('special pattern')];
   const startCols = [idx('one time start time'), idx('weekly start time'), idx('special start time')];
   const endCols   = [idx('one time end time'),   idx('weekly end time'),   idx('special end time')];
-  const props    = PropertiesService.getScriptProperties();
-  const botToken = props.getProperty('DISCORD_BOT_TOKEN');
-  const channelId = props.getProperty('DISCORD_CHANNEL_ID');
 
   var posted = 0, synced = 0;
   for (var r = 1; r < disp.length; r++) {
@@ -413,11 +412,14 @@ function notifyAndSyncEvents() {
       dateStr: dateStr, timeStr: timeStr,
     };
 
-    // 1) Discord — once per row.
-    if (botToken && channelId && !String(disp[r][cAnn]).trim()) {
-      if (postDiscord_(botToken, channelId, ev)) {
+    // 1) Discord — once per row, via a repository_dispatch (see comment above).
+    if (!String(disp[r][cAnn]).trim()) {
+      try {
+        ghDispatch_('event-announcement', ev);
         sheet.getRange(r + 1, cAnn + 1).setValue(new Date().toISOString());
         posted++;
+      } catch (e) {
+        Logger.log('Event announcement dispatch failed for "%s": %s', name, e);
       }
     }
 
@@ -431,50 +433,6 @@ function notifyAndSyncEvents() {
     }
   }
   return 'discord:' + posted + ' calendar:' + synced;
-}
-
-/** Post one event to the Announcement channel as the bot, then auto-publish it
- *  so every server that Follows the channel receives it. allowed_mentions is
- *  emptied so submitter-supplied text can never trigger an @everyone / @role ping.
- *  Returns true if the message posted (publishing is best-effort). */
-function postDiscord_(botToken, channelId, ev) {
-  var lines = [];
-  if (ev.by) lines.push('by ' + ev.by);
-  var when = [ev.dateStr, ev.timeStr].filter(Boolean).join(' ');
-  if (when)    lines.push('🗓 ' + when);
-  if (ev.note) lines.push(ev.note);
-  if (ev.link) lines.push(ev.link);
-  var content = ('**📢 New event: ' + ev.name + '**\n' + lines.join('\n')).slice(0, 1900);
-
-  var base = 'https://discord.com/api/v10/channels/' + channelId + '/messages';
-  var headers = {
-    Authorization: 'Bot ' + botToken,
-    'User-Agent': 'VRChatThaiSchedule (https://darkhager.github.io/Vrchat-Thai-World-Directory, 1.0)',
-  };
-
-  var res = UrlFetchApp.fetch(base, {
-    method: 'post', contentType: 'application/json', headers: headers,
-    payload: JSON.stringify({ content: content, allowed_mentions: { parse: [] } }),
-    muteHttpExceptions: true,
-  });
-  var code = res.getResponseCode();
-  if (code < 200 || code >= 300) {
-    Logger.log('Discord post failed (%s): %s', code, res.getContentText());
-    return false;
-  }
-
-  // Auto-publish (crosspost) to followers — needs only SEND_MESSAGES on our own
-  // message, and only works if this is an Announcement channel. Best-effort:
-  // if it fails the message is still in the channel, just not relayed.
-  var msgId = JSON.parse(res.getContentText()).id;
-  var cp = UrlFetchApp.fetch(base + '/' + msgId + '/crosspost', {
-    method: 'post', headers: headers, muteHttpExceptions: true,
-  });
-  var cc = cp.getResponseCode();
-  if (cc < 200 || cc >= 300) {
-    Logger.log('Discord publish failed (%s): %s — message posted but not relayed to followers', cc, cp.getContentText());
-  }
-  return true;
 }
 
 /** Create the calendar entry; returns its id (or null). Weekly → recurring series. */
