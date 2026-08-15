@@ -180,13 +180,6 @@
       "dow": 6,
       "venues": [
         {
-          "time": "19:00–20:30",
-          "name": "PORlNG Maid Cafe",
-          "status": "open",
-          "discord": "https://discord.gg/2PGRmhmHC2",
-          "note": ""
-        },
-        {
           "time": "20:00–22:00",
           "name": "SeaSide Glow",
           "status": "open",
