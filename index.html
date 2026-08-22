@@ -321,7 +321,7 @@
         <button type="button" data-page="guide">🐣 มือใหม่</button>
       </div>
       <a class="btn" id="joinBtn" href="https://vrchat.com/home/group/grp_0d413f3b-45dc-48d8-837c-ec7bc1ea3d44" target="_blank" rel="noopener">＋ Join VRChat Group</a>
-      <a class="btn" id="discordBtn" href="https://discord.gg/KrN45cpE8W" target="_blank" rel="noopener">💬 Discord</a>
+      <a class="btn" id="discordBtn" href="https://discord.gg/KrN45cpE8W" target="_blank" rel="noopener">💬 เข้ากลุ่ม Discord</a>
       <button class="toggle" id="filterToggle" type="button" aria-label="Filter open venues">🟢 Open only</button>
       <button class="toggle" id="themeToggle" type="button" aria-label="Toggle dark / light mode">🌙 Dark</button>
       <button class="toggle" id="langToggle" type="button" aria-label="Switch language / เปลี่ยนภาษา">🌐 ไทย</button>
@@ -478,6 +478,7 @@ const T = {
     subtitle:'สร้างจาก Token Claude เหลือใช้',
     tab_schedule:'📅 ตาราง', tab_activity:'📰 กิจกรรม', tab_guide:'🐣 มือใหม่',
     join:'＋ เข้ากลุ่ม VRChat',
+    discord:'💬 เข้ากลุ่ม Discord',
     open_only:'🟢 เฉพาะที่เปิด', show_all:'👁 แสดงทั้งหมด',
     dark:'🌙 มืด', light:'☀️ สว่าง', lang:'🌐 ไทย',
     ef_title:'📣 มีอีเวนต์หรือร้าน? ส่งให้เราลงตารางได้เลย',
@@ -500,6 +501,7 @@ const T = {
     subtitle:'Built with leftover Claude tokens',
     tab_schedule:'📅 Schedule', tab_activity:'📰 Activity', tab_guide:'🐣 New here',
     join:'＋ Join VRChat Group',
+    discord:'💬 Join Discord group',
     open_only:'🟢 Open only', show_all:'👁 Show all',
     dark:'🌙 Dark', light:'☀️ Light', lang:'🌐 Eng',
     ef_title:'📣 Got an event or venue? Submit it here.',
@@ -959,6 +961,7 @@ function applyLang(){
   pageTabs.querySelector('[data-page="activity"]').textContent = tr('tab_activity');
   pageTabs.querySelector('[data-page="guide"]').textContent = tr('tab_guide');
   setText('#joinBtn', tr('join'));
+  setText('#discordBtn', tr('discord'));
   document.querySelectorAll('.ef-title').forEach(e => e.textContent = tr('ef_title'));
   layoutSeg.querySelector('[data-layout="table"]').textContent = tr('seg_table');
   layoutSeg.querySelector('[data-layout="timeline"]').textContent = tr('seg_timeline');
