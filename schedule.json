@@ -9,7 +9,7 @@
         {
           "time": "20:00–21:30",
           "name": "ShinZenSo Cafe'",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/4pK6tgUSuv",
           "note": ""
         },
@@ -160,14 +160,14 @@
         {
           "time": "21:00–23:00",
           "name": "SinghaSiam",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/fCmVyuEDW3",
           "note": ""
         },
         {
           "time": "22:00–00:00",
           "name": "Olympus",
-          "status": "open",
+          "status": "closed",
           "discord": "https://discord.gg/xnEq7KFWac",
           "note": ""
         }
@@ -189,7 +189,7 @@
         {
           "time": "20:30–22:30",
           "name": "CHIBI KAWAI",
-          "status": "open",
+          "status": "closed",
           "discord": "https://discord.gg/vzaG7eMZuG",
           "note": ""
         },
