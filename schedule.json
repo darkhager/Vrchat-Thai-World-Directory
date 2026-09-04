@@ -62,13 +62,6 @@
           "status": "open",
           "discord": "https://discord.gg/Z3wxBeMQc4",
           "note": ""
-        },
-        {
-          "time": "21:00–23:00",
-          "name": "Helheim",
-          "status": "open",
-          "discord": "https://discord.gg/tUHyFjaXNx",
-          "note": ""
         }
       ]
     },
@@ -198,6 +191,13 @@
           "name": "Mali Tarot",
           "status": "open",
           "discord": "",
+          "note": ""
+        },
+        {
+          "time": "21:00–23:00",
+          "name": "H&H",
+          "status": "open",
+          "discord": "https://discord.gg/UDxcpMxz5p",
           "note": ""
         },
         {
