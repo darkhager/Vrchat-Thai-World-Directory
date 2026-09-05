@@ -96,7 +96,7 @@
         {
           "time": "19:00–21:00",
           "name": "PORlNG Maid Cafe",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/2PGRmhmHC2",
           "note": ""
         },
@@ -132,7 +132,7 @@
         {
           "time": "19:30–21:00",
           "name": "~YakiBar~",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/zTs4ZNZx5g",
           "note": ""
         },
@@ -182,7 +182,7 @@
         {
           "time": "20:30–22:30",
           "name": "CHIBI KAWAI",
-          "status": "open",
+          "status": "closed",
           "discord": "https://discord.gg/vzaG7eMZuG",
           "note": ""
         },
