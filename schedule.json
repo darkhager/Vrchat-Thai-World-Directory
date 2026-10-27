@@ -74,7 +74,7 @@
         {
           "time": "20:00–22:00",
           "name": "2Hours Coffee",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/zhsqhr2SyT",
           "note": ""
         },
@@ -103,14 +103,14 @@
         {
           "time": "21:00–23:00",
           "name": "SaengJan Night Club",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/m5mV3nnSeb",
           "note": ""
         },
         {
           "time": "22:00–00:00",
           "name": "WANTED",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/Kae5tgZN4n",
           "note": ""
         },
@@ -153,7 +153,7 @@
         {
           "time": "21:00–23:00",
           "name": "SinghaSiam",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/fCmVyuEDW3",
           "note": ""
         },
@@ -175,7 +175,7 @@
         {
           "time": "20:00–22:00",
           "name": "SeaSide Glow",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/MWjvu3YDBj",
           "note": ""
         },
@@ -232,7 +232,7 @@
         {
           "time": "19:00–21:00",
           "name": "Teapot House VR Thailand",
-          "status": "closed",
+          "status": "open",
           "discord": "https://discord.gg/ftCX9jt83Y",
           "note": ""
         },
